@@ -19,7 +19,7 @@ public final class Lua {
     public static LuaValue of(Object v) {
         if (v == null) return Constants.NIL;
         if (v instanceof LuaValue l) return l;
-        if (v instanceof String s) return ValueFactory.valueOf(s);
+        if (v instanceof String s) return utf8(s);
         if (v instanceof Boolean b) return ValueFactory.valueOf(b);
         if (v instanceof Integer || v instanceof Long || v instanceof Short || v instanceof Byte)
             return ValueFactory.valueOf(((Number) v).longValue());
@@ -55,7 +55,7 @@ public final class Lua {
             double d = v.toDouble();
             return d == Math.rint(d) && Math.abs(d) < 1e15 ? (Object) (long) d : (Object) d;
         }
-        if (v instanceof org.squiddev.cobalt.LuaString) return v.toString();
+        if (v instanceof org.squiddev.cobalt.LuaString ls) return str(ls);
         if (v instanceof LuaTable t) {
             int n = t.length();
             if (n > 0) {
@@ -69,11 +69,31 @@ public final class Lua {
                 Varargs next = t.next(k);
                 k = next.first();
                 if (k.isNil()) break;
-                map.put(k.toString(), toJava(next.arg(2), depth + 1));
+                map.put(k instanceof org.squiddev.cobalt.LuaString ks ? str(ks) : k.toString(), toJava(next.arg(2), depth + 1));
             }
             return map;
         }
         throw new LuaError("cannot store value of type " + v.typeName());
+    }
+
+    /** Lua strings are byte strings; plugins are UTF-8 source files. */
+    public static org.squiddev.cobalt.LuaString utf8(String s) {
+        return ValueFactory.valueOf(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    public static String str(org.squiddev.cobalt.LuaString s) {
+        byte[] b = new byte[s.length()];
+        s.copyTo(b, 0);
+        return new String(b, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    /** Like checkString() but decodes UTF-8. */
+    public static String checkStr(LuaValue v) throws LuaError {
+        return str(v.checkLuaString());
+    }
+
+    public static String optStr(LuaValue v, String def) throws LuaError {
+        return v.isNil() ? def : checkStr(v);
     }
 
     public static Varargs args(Object... values) {

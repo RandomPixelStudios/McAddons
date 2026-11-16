@@ -133,6 +133,14 @@ class CoreTest {
         assertThrows(Exception.class, () -> reg.get("http://raw.githubusercontent.com/x"));
     }
 
+    @Test void utf8RoundTrip() throws Exception {
+        plugin("utf", "mc.command('u', function(ctx) return 'Grad ° ä ' .. ctx.args[1] end)", "commands");
+        mgr.loadAll();
+        List<String> r = new ArrayList<>();
+        mgr.runCommand("u", sender(r), "ö€");
+        assertEquals("Grad ° ä ö€", r.get(0));
+    }
+
     static PluginManager.Sender sender(List<String> replies) {
         return new PluginManager.Sender() {
             public String name() { return "tester"; }

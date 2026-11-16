@@ -68,7 +68,10 @@ public final class PluginManager {
 
     // ---------------------------------------------------------------- discovery ---------------
 
-    public record Info(String id, Manifest manifest, boolean enabled, boolean running, String error) {}
+    public record Info(String id, Manifest manifest, boolean enabled, boolean running, String error) {
+        /** True if the plugin is meant for this side (otherwise it runs on the other side only). */
+        public boolean forSide(Side s) { return manifest == null || manifest.sideEnum().runsOn(s); }
+    }
 
     /** Every plugin folder on disk, with its status for this side. */
     public List<Info> list() {
@@ -269,7 +272,8 @@ public final class PluginManager {
         ctx.put("args", args);
         ctx.put("raw", rawArgs == null ? "" : rawArgs);
         var r = p.call("command /" + name, fn, Lua.args(ctx));
-        if (r != null && !r.first().isNil()) sender.reply(r.first().toString());
+        if (r != null && !r.first().isNil())
+            sender.reply(r.first() instanceof org.squiddev.cobalt.LuaString ls ? Lua.str(ls) : r.first().toString());
         return true;
     }
 
