@@ -15,7 +15,7 @@ import java.util.List;
 
 /** Settings for the built-in block hiding. */
 public final class BlockHidingScreen extends Screen {
-    private static final int PER_PAGE = 8;
+    private int PER_PAGE = 8;
     private final Screen parent;
     private EditBox input;
     private int page;
@@ -35,6 +35,7 @@ public final class BlockHidingScreen extends Screen {
     protected void init() {
         var c = BlockHiding.config();
         int l = width / 2 - 150, t = 40;
+        PER_PAGE = Math.max(3, Math.min(10, (height - t - 54 - 30) / 20));
         addRenderableWidget(Button.builder(Component.literal(BlockHiding.active() ? "§aActive (X)" : "§7Inactive (X)"), b -> { BlockHiding.toggle(); rebuildWidgets(); })
                 .bounds(l, t, 96, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Mode: " + ("hide".equals(c.mode) ? "hide listed" : "X-ray (show listed)")), b -> {
@@ -63,6 +64,9 @@ public final class BlockHidingScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("<"), b -> { page--; rebuildWidgets(); }).bounds(l, by, 30, 20).build());
         addRenderableWidget(Button.builder(Component.literal(">"), b -> { page++; rebuildWidgets(); }).bounds(l + 90, by, 30, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(l + 240, by, 60, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Night vision: " + (c.night_vision ? "on" : "off")), b -> {
+            c.night_vision = !c.night_vision; BlockHiding.save(); BlockHiding.nightVision(Minecraft.getInstance()); rebuildWidgets();
+        }).bounds(l + 130, by, 106, 20).build());
     }
 
     private void add() {

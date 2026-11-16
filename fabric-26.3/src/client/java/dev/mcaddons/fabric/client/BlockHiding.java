@@ -40,6 +40,7 @@ public final class BlockHiding {
         public List<String> xray = new ArrayList<>(XRAY_DEFAULT);
         public List<String> hide = new ArrayList<>(List.of("minecraft:grass_block", "minecraft:short_grass", "minecraft:tall_grass"));
         public int radius_chunks = 16;
+        public boolean night_vision = true;
     }
 
     private static final Path FILE = McAddons.ROOT.resolve("block-hiding.json");
@@ -102,20 +103,29 @@ public final class BlockHiding {
         }
         config();
         active = !active;
+        nightVision(mc);
         mc.player.sendOverlayMessage(Component.literal(active ? "§aBlock hiding ON (" + (xrayMode ? "X-ray" : "hide list") + ")" : "§cBlock hiding OFF"));
         rebuild();
     }
 
+    /** Client-side night vision while active (like X To Xray); never sent to the server. */
+    static void nightVision(Minecraft mc) {
+        if (mc.player == null) return;
+        var nv = net.minecraft.world.effect.MobEffects.NIGHT_VISION;
+        if (active && config().night_vision) mc.player.addEffect(new net.minecraft.world.effect.MobEffectInstance(nv, -1, 0, false, false, false));
+        else if (mc.player.hasEffect(nv) && mc.player.getEffect(nv).getDuration() == -1) mc.player.removeEffect(nv);
+    }
+
     public static void setServerAllows(boolean allows) {
         serverAllows = allows;
-        if (!allowed() && active) { active = false; rebuild(); }
+        if (!allowed() && active) { active = false; nightVision(Minecraft.getInstance()); rebuild(); }
     }
 
     public static void onDisconnect() { serverAllows = false; active = false; }
 
     static void tick(Minecraft mc) {
         if (!active || mc.player == null) return;
-        if (!allowed()) { active = false; rebuild(); return; }
+        if (!allowed()) { active = false; nightVision(mc); rebuild(); return; }
         SectionPos pos = SectionPos.of(mc.player.blockPosition());
         if (!pos.equals(lastPos)) { lastPos = pos; } // meshes rebuild naturally when new chunks load
     }
