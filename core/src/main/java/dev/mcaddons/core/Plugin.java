@@ -191,6 +191,7 @@ public final class Plugin {
         mc.rawset("side", ValueFactory.valueOf(host.side().name().toLowerCase()));
         mc.rawset("plugin", Lua.of(Map.of("id", manifest.id, "name", manifest.name, "version", manifest.version)));
 
+        mc.rawset("singleplayer", fn(a -> ValueFactory.valueOf(host.singleplayer())));
         mc.rawset("log", fn(a -> { log.info(join(a)); return Constants.NONE; }));
         mc.rawset("warn", fn(a -> { log.warn(join(a)); return Constants.NONE; }));
         mc.rawset("has_permission", fn(a -> ValueFactory.valueOf(Permission.byId(Lua.checkStr(a.arg(1))).map(perms::contains).orElse(false))));
@@ -276,8 +277,8 @@ public final class Plugin {
         // ---- API 1.1 -------------------------------------------------------------------------
         // world rendering (client, inside on("render"))
         LuaTable render = new LuaTable();
-        render.rawset("line", fn(a -> { renderOp(new HudOp.Line(a.arg(1).checkDouble(), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), a.arg(5).checkDouble(), a.arg(6).checkDouble(), (int) a.arg(7).optLong(0xFFFFFFFFL), (float) a.arg(8).optDouble(2))); return Constants.NONE; }));
-        render.rawset("box", fn(a -> { renderOp(new HudOp.Box(a.arg(1).checkDouble(), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), a.arg(5).checkDouble(), a.arg(6).checkDouble(), (int) a.arg(7).optLong(0xFFFFFFFFL), (int) a.arg(8).optLong(0))); return Constants.NONE; }));
+        render.rawset("line", fn(a -> { renderOp(new HudOp.Line(a.arg(1).checkDouble(), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), a.arg(5).checkDouble(), a.arg(6).checkDouble(), (int) a.arg(7).optLong(0xFFFFFFFFL), (float) a.arg(8).optDouble(2), a.arg(9).optBoolean(false))); return Constants.NONE; }));
+        render.rawset("box", fn(a -> { renderOp(new HudOp.Box(a.arg(1).checkDouble(), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), a.arg(5).checkDouble(), a.arg(6).checkDouble(), (int) a.arg(7).optLong(0xFFFFFFFFL), (int) a.arg(8).optLong(0), a.arg(9).optBoolean(false))); return Constants.NONE; }));
         render.rawset("text", fn(a -> { renderOp(new HudOp.WorldText(clip(Lua.checkStr(a.arg(1))), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), (int) a.arg(5).optLong(0xFFFFFFFFL), (float) a.arg(6).optDouble(0.5))); return Constants.NONE; }));
         mc.rawset("render", render);
 

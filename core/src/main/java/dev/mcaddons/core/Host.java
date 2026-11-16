@@ -46,6 +46,8 @@ public interface Host {
 
     // -- client -------------------------------------------------------------------------------
     default void toast(String title, String message) { unsupported("toast"); }
+    /** Client: true in singleplayer (integrated server), false on a remote server. */
+    default boolean singleplayer() { return false; }
     default int screenWidth() { return 0; }
     default int screenHeight() { return 0; }
     default void bindKey(int slot, String label, String defaultKey) {}

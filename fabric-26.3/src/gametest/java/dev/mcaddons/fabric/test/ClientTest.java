@@ -91,6 +91,23 @@ public final class ClientTest implements FabricClientGameTest {
             ctx.takeScreenshot("03c-lua-gui");
             ctx.setScreen(() -> null);
 
+            // X To Xray plugin: bury ores and a chest, toggle (slot 4 = coords 1, waypoints 2+3, xtoxray 4+5)
+            sp.getServer().runCommand("fill -6 -64 -6 6 -61 6 minecraft:stone");
+            sp.getServer().runCommand("setblock 2 -63 -4 minecraft:diamond_ore");
+            sp.getServer().runCommand("setblock -3 -62 -5 minecraft:gold_ore");
+            sp.getServer().runCommand("setblock 0 -64 -6 minecraft:chest");
+            ctx.waitTicks(10);
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
+            ctx.getInput().lookAt(180f, 45f);
+            ctx.waitTicks(60);
+            ctx.takeScreenshot("03e-xtoxray");
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(5));
+            ctx.waitTicks(10);
+            check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof dev.mcaddons.fabric.client.PluginScreen), "X To Xray settings screen opened");
+            ctx.takeScreenshot("03f-xtoxray-settings");
+            ctx.setScreen(() -> null);
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
+
             // shop: server plugin opens a chest menu for the player
             sp.getServer().runCommand("give @a minecraft:emerald 16");
             sp.getServer().runCommand("execute as @p run shop");

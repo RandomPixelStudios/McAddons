@@ -53,6 +53,7 @@ Edit, save → reloaded. Publish with a pull request to the registry repo.
 | `mc.on(event, fn)` | – (`chat`, `hud` for those events) | see events below; return `false` to cancel cancellable events |
 | `mc.after(ticks, fn)` / `mc.every(ticks, fn)` | – | returns handle with `:cancel()`; 20 ticks = 1 s |
 | `mc.log(...)`, `mc.warn(...)`, `print(...)` | – | |
+| `mc.singleplayer()` | – | client: true in singleplayer |
 | `mc.command(name, fn(ctx))` | `commands` | ctx = `{sender, is_player, args, raw}`; returned string is sent back |
 | `mc.run(cmd)` | `commands.run` | runs a command as console (server) / as the player (client) |
 | `mc.tell(player, msg)`, `mc.broadcast(msg)`, `mc.actionbar(player, msg)` | `chat` | `§` colour codes work |
@@ -66,7 +67,7 @@ Edit, save → reloaded. Publish with a pull request to the registry repo.
 | `mc.key(label, default_key, fn)` | `keys` | 16 slots, rebindable under Controls → MC Addons |
 | `mc.storage.get(k)`, `.set(k, v)`, `.keys()` | `storage` | JSON-persisted per plugin, survives reloads |
 | `mc.count_item(p, item)` / `mc.take_item(p, item, n)` | `players` / `players.modify` | inventory checks, e.g. for shops |
-| `mc.render.line(x1,y1,z1,x2,y2,z2,argb,width)`, `mc.render.box(x1,y1,z1,x2,y2,z2,argb,fill)`, `mc.render.text(s,x,y,z,argb,scale)` | `render` | client, only inside `on("render")`; drawn in the world |
+| `mc.render.line(x1,y1,z1,x2,y2,z2,argb,width,through_walls)`, `mc.render.box(x1,y1,z1,x2,y2,z2,argb,fill,through_walls)`, `mc.render.text(s,x,y,z,argb,scale)` | `render` | client, only inside `on("render")`; drawn in the world |
 | `mc.gui.open{title, width, height, widgets, on_close}`, `mc.gui.close()` | `gui` | client screens: `label`, `button` (on_click gets `e.inputs`), `input`, `item`, `rect` |
 | `mc.menu.open(player, {title, rows, items = {[slot]=id}, on_click})` | `gui` | server chest menus (shops, selectors); items can't be taken |
 | `mc.net.send(channel, data [, player])` | `network` | talks to the other half of the same plugin → `on("message", fn(e))` |

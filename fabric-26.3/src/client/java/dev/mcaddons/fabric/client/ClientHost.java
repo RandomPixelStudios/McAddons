@@ -57,6 +57,7 @@ public final class ClientHost implements Host {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.mcaddons.fabric.McaMessage(plugin, channel, json));
     }
 
+    @Override public boolean singleplayer() { return mc.hasSingleplayerServer(); }
     @Override public int screenWidth() { return mc.getWindow().getGuiScaledWidth(); }
     @Override public int screenHeight() { return mc.getWindow().getGuiScaledHeight(); }
     @Override public void bindKey(int slot, String label, String defaultKey) { Keys.bind(slot, label, defaultKey); }
