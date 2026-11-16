@@ -29,6 +29,14 @@
     "fabric-api": "*"
   },
   "mixins": [
-    "mcaddons.mixins.json"
+    "mcaddons.mixins.json",
+    {
+      "config": "mcaddons.client.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "mcaddons.sodium.mixins.json",
+      "environment": "client"
+    }
   ]
 }

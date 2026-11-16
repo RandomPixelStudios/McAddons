@@ -33,7 +33,7 @@ public final class ServerCommands {
         published.clear();
         d.register(Commands.literal("mca")
                 .requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                .executes(c -> reply(c, "MC Addons - /mca list|enable|disable|reload|remove|new|browse|install <id>"))
+                .executes(c -> reply(c, "MC Addons - /mca list|enable|disable|reload|remove|new|browse|install <id>|blockhiding"))
                 .then(Commands.literal("list").executes(ServerCommands::list))
                 .then(op("enable", PluginManager::enable))
                 .then(op("disable", PluginManager::disable))
@@ -43,6 +43,12 @@ public final class ServerCommands {
                         .executes(c -> { try { return reply(c, mgr().scaffold(StringArgumentType.getString(c, "id"))); }
                                          catch (Exception e) { return reply(c, "Failed: " + e.getMessage()); } })))
                 .then(Commands.literal("browse").executes(ServerCommands::browse))
+                .then(Commands.literal("blockhiding")
+                        .executes(c -> reply(c, "Block hiding: " + (ServerConfig.get().allow_block_hiding ? "allowed" : "not allowed")
+                                + (ServerConfig.get().block_hiding_ops_only ? " (ops only)" : "") + " - /mca blockhiding on|off|ops"))
+                        .then(Commands.literal("on").executes(c -> blockHiding(c, true, false)))
+                        .then(Commands.literal("ops").executes(c -> blockHiding(c, true, true)))
+                        .then(Commands.literal("off").executes(c -> blockHiding(c, false, false))))
                 .then(Commands.literal("install").then(Commands.argument("id", StringArgumentType.word())
                         .executes(ServerCommands::install))));
         // re-add plugin commands after /reload rebuilt the dispatcher
@@ -62,6 +68,15 @@ public final class ServerCommands {
     private static int reply(CommandContext<CommandSourceStack> c, String msg) {
         c.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
+    }
+
+    private static int blockHiding(CommandContext<CommandSourceStack> c, boolean allow, boolean opsOnly) {
+        ServerConfig cfg = ServerConfig.get();
+        cfg.allow_block_hiding = allow;
+        cfg.block_hiding_ops_only = opsOnly;
+        ServerConfig.save();
+        HidingAllowed.broadcast(c.getSource().getServer());
+        return reply(c, "Block hiding is now " + (allow ? (opsOnly ? "allowed for operators" : "allowed for everyone") : "disabled") + " on this server.");
     }
 
     private static int list(CommandContext<CommandSourceStack> c) {

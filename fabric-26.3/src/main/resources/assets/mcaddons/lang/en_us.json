@@ -1,5 +1,22 @@
 {
   "key.category.mcaddons.main": "MC Addons",
   "key.mcaddons.browser": "Open plugin browser",
-  "key.mcaddons.slot": "Plugin key slot"
+  "key.mcaddons.slot": "Plugin key slot",
+  "key.mcaddons.hiding": "Toggle block hiding (X-ray)",
+  "key.mcaddons.slot.1": "Plugin key 1",
+  "key.mcaddons.slot.2": "Plugin key 2",
+  "key.mcaddons.slot.3": "Plugin key 3",
+  "key.mcaddons.slot.4": "Plugin key 4",
+  "key.mcaddons.slot.5": "Plugin key 5",
+  "key.mcaddons.slot.6": "Plugin key 6",
+  "key.mcaddons.slot.7": "Plugin key 7",
+  "key.mcaddons.slot.8": "Plugin key 8",
+  "key.mcaddons.slot.9": "Plugin key 9",
+  "key.mcaddons.slot.10": "Plugin key 10",
+  "key.mcaddons.slot.11": "Plugin key 11",
+  "key.mcaddons.slot.12": "Plugin key 12",
+  "key.mcaddons.slot.13": "Plugin key 13",
+  "key.mcaddons.slot.14": "Plugin key 14",
+  "key.mcaddons.slot.15": "Plugin key 15",
+  "key.mcaddons.slot.16": "Plugin key 16"
 }

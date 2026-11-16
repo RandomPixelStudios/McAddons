@@ -43,6 +43,7 @@ public final class McAddons implements ModInitializer {
         Content.registerAll(ROOT);
         net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(McaMessage.TYPE, McaMessage.CODEC);
         net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.serverboundPlay().register(McaMessage.TYPE, McaMessage.CODEC);
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(HidingAllowed.TYPE, HidingAllowed.CODEC);
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(McaMessage.TYPE, (msg, ctx) -> {
             PluginManager m = server;
             if (m != null) m.deliver(msg.plugin(), msg.channel(), msg.json(), ctx.player().getName().getString());
@@ -60,7 +61,10 @@ public final class McAddons implements ModInitializer {
         });
         ServerTickEvents.END_SERVER_TICK.register(s -> { if (server != null) server.tick(); });
 
-        ServerPlayConnectionEvents.JOIN.register((h, sender, s) -> emit("player_join", h.player));
+        ServerPlayConnectionEvents.JOIN.register((h, sender, s) -> {
+            HidingAllowed.send(h.player);
+            emit("player_join", h.player);
+        });
         ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> emit("player_leave", h.player));
         ServerPlayerEvents.AFTER_RESPAWN.register((o, n, alive) -> emit("player_respawn", n));
         ServerLivingEntityEvents.AFTER_DEATH.register((e, src) -> {

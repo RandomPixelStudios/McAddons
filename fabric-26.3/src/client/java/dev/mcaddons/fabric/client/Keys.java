@@ -19,10 +19,12 @@ public final class Keys {
     static final List<KeyMapping> SLOTS = new ArrayList<>();
     static final String[] LABELS = new String[dev.mcaddons.core.PluginManager.KEY_SLOTS + 1];
     static KeyMapping browser;
+    static KeyMapping hiding;
 
     static void register() {
         KeyMapping.Category cat = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("mcaddons", "main"));
         browser = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.browser", InputConstants.Type.KEYBOARD, InputConstants.KEY_K, cat));
+        hiding = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.hiding", InputConstants.Type.KEYBOARD, InputConstants.KEY_X, cat));
         for (int i = 1; i <= dev.mcaddons.core.PluginManager.KEY_SLOTS; i++)
             SLOTS.add(KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.slot." + i, InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), cat)));
     }
@@ -41,6 +43,8 @@ public final class Keys {
 
     static void tick(Minecraft mc) {
         while (browser.consumeClick()) if (mc.gui.screen() == null) mc.gui.setScreen(new PluginBrowserScreen(null));
+        while (hiding.consumeClick()) BlockHiding.toggle();
+        BlockHiding.tick(mc);
         var m = McAddonsClient.manager();
         for (int i = 0; i < SLOTS.size(); i++) while (SLOTS.get(i).consumeClick()) if (m != null) m.pressKey(i + 1);
     }

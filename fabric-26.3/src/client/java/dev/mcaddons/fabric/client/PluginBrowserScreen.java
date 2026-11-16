@@ -51,6 +51,8 @@ public final class PluginBrowserScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal((!browseTab ? "§e" : "") + "Installed"), b -> { browseTab = false; selected = -1; refresh(false); }).bounds(x + 74, 26, 70, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Refresh"), b -> refresh(true)).bounds(x + 148, 26, 60, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width - 70, height - 26, 60, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Block hiding"), b -> Minecraft.getInstance().gui.setScreen(new BlockHidingScreen(this)))
+                .bounds(width - 160, height - 26, 86, 20).build());
 
         if (pendingConsent != null) {
             addRenderableWidget(Button.builder(Component.literal("§aAllow & install"), b -> { Registry.Entry e = pendingConsent; pendingConsent = null; install(e); rebuildWidgets(); })

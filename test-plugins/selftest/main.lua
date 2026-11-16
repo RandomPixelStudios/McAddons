@@ -32,6 +32,8 @@ mc.after(200, function()
       mc.log(found > 0 and "WORLDGEN OK" or "WORLDGEN MISSING")
     end
   end)
+  mc.run("mca blockhiding on")
+  mc.run("mca blockhiding off")
   mc.run("mca remove welcome")
   mc.run("mca install welcome")
   mc.after(260, function()

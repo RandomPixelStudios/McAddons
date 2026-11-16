@@ -108,6 +108,23 @@ public final class ClientTest implements FabricClientGameTest {
             ctx.setScreen(() -> null);
             ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
 
+            // built-in block hiding (X-ray via chunk mesh mixin)
+            check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.allowed()), "block hiding allowed in singleplayer");
+            ctx.runOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.toggle());
+            ctx.getInput().lookAt(180f, 60f);
+            ctx.waitTicks(40);
+            sp.getConnection().waitForChunksRender();
+            check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.active()), "block hiding active");
+            check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.filter(
+                    net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()).isAir()), "stone hidden in X-ray mode");
+            ctx.takeScreenshot("03g-block-hiding-xray");
+            ctx.setScreen(() -> new dev.mcaddons.fabric.client.BlockHidingScreen(null));
+            ctx.waitTicks(5);
+            ctx.takeScreenshot("03h-block-hiding-settings");
+            ctx.setScreen(() -> null);
+            ctx.runOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.toggle());
+            ctx.waitTicks(5);
+
             // shop: server plugin opens a chest menu for the player
             sp.getServer().runCommand("give @a minecraft:emerald 16");
             sp.getServer().runCommand("execute as @p run shop");

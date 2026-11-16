@@ -24,6 +24,17 @@ Plugins live in `.minecraft/mcaddons/plugins/<id>/`.
 | Server console / ops | `/mca list`, `/mca browse`, `/mca install <id>`, `/mca enable|disable|reload|remove <id>`, `/mca new <id>` |
 | Client plugin commands | `/pc <command> [args]` |
 
+## Built-in block hiding (X-ray)
+
+Press **X** (or *Block hiding* in the plugin browser). Same technique as X To Xray: chunk meshes are rebuilt and blocks are swapped for air by a mixin (Sodium supported).
+
+* **Mode X-ray:** only listed blocks stay visible (default: ores, chests, spawners, water, lava).
+* **Mode hide:** listed blocks become invisible (e.g. grass, leaves).
+* Lists are edited in the settings screen (add any block id).
+* **Singleplayer:** always allowed. **Servers:** only if the server runs MC Addons and the admin allows it:
+  `/mca blockhiding on` (everyone), `/mca blockhiding ops` (operators only), `/mca blockhiding off` (default) –
+  stored in `mcaddons/server-config.json`. On servers without permission it stays off.
+
 ## Your first plugin
 
 `/mca new hello` creates `mcaddons/plugins/hello/`:

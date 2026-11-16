@@ -48,7 +48,9 @@ public final class McAddonsClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.mcaddons.fabric.McaMessage.TYPE,
                 (msg, ctx) -> { if (client != null) client.deliver(msg.plugin(), msg.channel(), msg.json(), null); });
         ClientPlayConnectionEvents.JOIN.register((h, s, mc) -> emit("world_load", Map.of("player", mc.getUser().getName())));
-        ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> emit("world_unload", Map.of()));
+        ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> { BlockHiding.onDisconnect(); emit("world_unload", Map.of()); });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.mcaddons.fabric.HidingAllowed.TYPE,
+                (msg, ctx) -> BlockHiding.setServerAllows(msg.allowed()));
         ClientPlayerBlockBreakEvents.AFTER.register((level, p, pos, state) -> emit("block_break", Map.of(
                 "player", p.getName().getString(), "block", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString(),
                 "x", pos.getX(), "y", pos.getY(), "z", pos.getZ(), "dimension", level.dimension().identifier().toString())));
