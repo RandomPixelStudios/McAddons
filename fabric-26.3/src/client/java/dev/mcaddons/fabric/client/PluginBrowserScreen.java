@@ -167,7 +167,7 @@ public final class PluginBrowserScreen extends Screen {
             else if (mx >= 8 && mx < right && my >= y && my < y + ROW) g.fill(8, y, right, y + ROW, 0x30FFFFFF);
             g.text(font, r.name() + " §7" + r.version(), 14, y + 4, 0xFFFFFFFF);
             String badge = r.local() == null ? "" : !r.local().enabled() ? "§7● disabled" : r.local().running() ? "§a● running"
-                    : !r.local().forSide(dev.mcaddons.core.Side.CLIENT) ? "§b● server plugin" : "§c● error";
+                    : !r.local().forSide(dev.mcaddons.core.Side.CLIENT) ? "§b● server" : "§c● error";
             if (r.remote() != null && r.local() != null && newer(r)) badge += " §e↑ update";
             g.text(font, "§7" + trim(r.authors(), 24) + "  " + badge, 14, y + 14, 0xFFFFFFFF);
         }
