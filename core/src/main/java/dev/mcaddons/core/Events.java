@@ -18,7 +18,9 @@ public final class Events {
             "item_use",        // {player, item}               cancellable
             "attack_entity",   // {player, entity, name}       cancellable
             "world_load", "world_unload",
-            "hud"              // {width, height} – client only, draw with mc.hud.*
+            "hud",             // {width, height} – client only, draw with mc.hud.*
+            "render",          // {} – client only, draw in the world with mc.render.*
+            "message"          // {channel, data, player} – from the other side of the same plugin (mc.net.send)
     );
 
     public static final Set<String> CANCELLABLE = Set.of("chat", "block_break", "block_use", "item_use", "attack_entity");

@@ -43,7 +43,10 @@ public final class McAddonsClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             if (client != null) client.tick();
             Keys.tick(mc);
+            if (client != null && mc.level != null) WorldRender.draw(mc, client.render());
         });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.mcaddons.fabric.McaMessage.TYPE,
+                (msg, ctx) -> { if (client != null) client.deliver(msg.plugin(), msg.channel(), msg.json(), null); });
         ClientPlayConnectionEvents.JOIN.register((h, s, mc) -> emit("world_load", Map.of("player", mc.getUser().getName())));
         ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> emit("world_unload", Map.of()));
         ClientPlayerBlockBreakEvents.AFTER.register((level, p, pos, state) -> emit("block_break", Map.of(
@@ -57,6 +60,9 @@ public final class McAddonsClient implements ClientModInitializer {
                 switch (op) {
                     case HudOp.Text t -> g.text(mc.font, t.text(), t.x(), t.y(), t.color(), t.shadow());
                     case HudOp.Rect r -> { if (r.w() > 0 && r.h() > 0) g.fill(r.x(), r.y(), r.x() + r.w(), r.y() + r.h(), r.color()); }
+                    case HudOp.Line l -> {}
+                    case HudOp.Box b -> {}
+                    case HudOp.WorldText t -> {}
                     case HudOp.Item i -> BuiltInRegistries.ITEM.getOptional(Identifier.tryParse(i.item()))
                             .ifPresent(item -> g.item(new ItemStack(item), i.x(), i.y()));
                 }

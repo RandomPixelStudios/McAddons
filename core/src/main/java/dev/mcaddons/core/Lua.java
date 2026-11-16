@@ -47,7 +47,12 @@ public final class Lua {
     }
 
     /** Converts plain Lua data back to Java (tables become Map or List). Depth-limited. */
-    public static Object toJava(LuaValue v, int depth) throws LuaError {
+    public static Object toJava(LuaValue v, int depth) throws LuaError { return toJava(v, depth, null); }
+
+    /** Callback registrar turns Lua functions into {"$cb": id} entries (used for GUI specs). */
+    public interface FnReg { int register(LuaValue fn); }
+
+    public static Object toJava(LuaValue v, int depth, FnReg reg) throws LuaError {
         if (depth > 16) throw new LuaError("table nested too deeply");
         if (v.isNil()) return null;
         if (v instanceof org.squiddev.cobalt.LuaBoolean) return v.toBoolean();
@@ -60,7 +65,7 @@ public final class Lua {
             int n = t.length();
             if (n > 0) {
                 List<Object> list = new ArrayList<>();
-                for (int i = 1; i <= n; i++) list.add(toJava(t.rawget(i), depth + 1));
+                for (int i = 1; i <= n; i++) list.add(toJava(t.rawget(i), depth + 1, reg));
                 return list;
             }
             Map<String, Object> map = new LinkedHashMap<>();
@@ -69,10 +74,11 @@ public final class Lua {
                 Varargs next = t.next(k);
                 k = next.first();
                 if (k.isNil()) break;
-                map.put(k instanceof org.squiddev.cobalt.LuaString ks ? str(ks) : k.toString(), toJava(next.arg(2), depth + 1));
+                map.put(k instanceof org.squiddev.cobalt.LuaString ks ? str(ks) : k.toString(), toJava(next.arg(2), depth + 1, reg));
             }
             return map;
         }
+        if (reg != null && v instanceof org.squiddev.cobalt.function.LuaFunction) return Map.of("$cb", (long) reg.register(v));
         throw new LuaError("cannot store value of type " + v.typeName());
     }
 

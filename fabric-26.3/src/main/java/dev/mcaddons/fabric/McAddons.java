@@ -28,7 +28,10 @@ import java.util.Map;
 
 /** Server-side entrypoint (also runs on the client, where it drives the integrated server). */
 public final class McAddons implements ModInitializer {
-    public static final Path ROOT = FabricLoader.getInstance().getGameDir().resolve("mcaddons");
+    /** Plugin root; override with -Dmcaddons.root=/path (used by automated tests). */
+    public static final Path ROOT = System.getProperty("mcaddons.root", "").isBlank()
+            ? FabricLoader.getInstance().getGameDir().resolve("mcaddons")
+            : Path.of(System.getProperty("mcaddons.root"));
     public static final Registry REGISTRY = new Registry(System.getProperty("mcaddons.index", Registry.DEFAULT_INDEX));
     private static volatile PluginManager server;
 
@@ -38,6 +41,12 @@ public final class McAddons implements ModInitializer {
     @Override
     public void onInitialize() {
         Content.registerAll(ROOT);
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(McaMessage.TYPE, McaMessage.CODEC);
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.serverboundPlay().register(McaMessage.TYPE, McaMessage.CODEC);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(McaMessage.TYPE, (msg, ctx) -> {
+            PluginManager m = server;
+            if (m != null) m.deliver(msg.plugin(), msg.channel(), msg.json(), ctx.player().getName().getString());
+        });
         CommandRegistrationCallback.EVENT.register((d, ctx, sel) -> ServerCommands.register(d));
 
         ServerLifecycleEvents.SERVER_STARTED.register(s -> {

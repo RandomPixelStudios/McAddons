@@ -141,6 +141,21 @@ class CoreTest {
         assertEquals("Grad ° ä ö€", r.get(0));
     }
 
+    /** Every plugin in the registry checkout must compile in the real (Lua 5.2) sandbox. */
+    @Test void registryPluginsCompile() throws Exception {
+        Path reg = Path.of("../registry/plugins");
+        if (!Files.isDirectory(reg)) return;
+        try (var dirs = Files.list(reg)) {
+            for (Path d : dirs.toList()) {
+                Manifest.read(d.resolve("plugin.json"));
+                try (var files = Files.walk(d)) {
+                    for (Path f : files.filter(x -> x.toString().endsWith(".lua")).toList())
+                        new Sandbox(log, 1000, 100).compile(Files.readString(f), f.toString());
+                }
+            }
+        }
+    }
+
     static PluginManager.Sender sender(List<String> replies) {
         return new PluginManager.Sender() {
             public String name() { return "tester"; }

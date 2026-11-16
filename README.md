@@ -7,7 +7,7 @@
 * **Secure sandbox** – no `io`, `os`, `debug`, `load`, no Java access, per-call instruction budget + timeout, declared permissions, path-checked `require`.
 * **Plugin browser** – press **K** (or *Plugins* on the title/pause screen). Index comes from
   [RandomPixelStudios/McAddons-Plugins](https://github.com/RandomPixelStudios/McAddons-Plugins); files are SHA-256 verified.
-* **Version independent** – plugins only talk to the stable `mc.*` API (versioned separately, currently **1.0**).
+* **Version independent** – plugins only talk to the stable `mc.*` API (versioned separately, currently **1.1**).
   Each Minecraft version gets a small adapter module (`fabric-26.3/`); plugins never touch Minecraft classes, so the same plugin runs everywhere an adapter exists.
 * **Real content** – plugins can add items and blocks (declared in `plugin.json`), HUD overlays, key bindings, commands, world edits, events with cancellation.
 
@@ -65,19 +65,42 @@ Edit, save → reloaded. Publish with a pull request to the registry repo.
 | `mc.hud.text(x, y, s, argb, shadow)`, `mc.hud.rect(x, y, w, h, argb)`, `mc.hud.item(x, y, id)` | `hud` | only inside `on("hud")` |
 | `mc.key(label, default_key, fn)` | `keys` | 16 slots, rebindable under Controls → MC Addons |
 | `mc.storage.get(k)`, `.set(k, v)`, `.keys()` | `storage` | JSON-persisted per plugin, survives reloads |
+| `mc.count_item(p, item)` / `mc.take_item(p, item, n)` | `players` / `players.modify` | inventory checks, e.g. for shops |
+| `mc.render.line(x1,y1,z1,x2,y2,z2,argb,width)`, `mc.render.box(x1,y1,z1,x2,y2,z2,argb,fill)`, `mc.render.text(s,x,y,z,argb,scale)` | `render` | client, only inside `on("render")`; drawn in the world |
+| `mc.gui.open{title, width, height, widgets, on_close}`, `mc.gui.close()` | `gui` | client screens: `label`, `button` (on_click gets `e.inputs`), `input`, `item`, `rect` |
+| `mc.menu.open(player, {title, rows, items = {[slot]=id}, on_click})` | `gui` | server chest menus (shops, selectors); items can't be taken |
+| `mc.net.send(channel, data [, player])` | `network` | talks to the other half of the same plugin → `on("message", fn(e))` |
+| `mc.world.gamerule(name, value)` | `world.write` | |
 | `require("module")` | – | loads `module.lua` from the plugin folder only |
 | `mc.api_version`, `mc.minecraft_version`, `mc.side`, `mc.plugin`, `mc.content`, `mc.has_permission(p)` | – | |
 
 **Events:** `enable`, `disable`, `tick`, `player_join`, `player_leave`, `player_respawn`, `player_death`,
-`chat`\*, `block_break`\*, `block_use`\*, `item_use`\*, `attack_entity`\*, `world_load`, `world_unload`, `hud` (\* = cancellable).
+`chat`\*, `block_break`\*, `block_use`\*, `item_use`\*, `attack_entity`\*, `world_load`, `world_unload`, `hud`, `render`, `message` (\* = cancellable).
 
-### Items & blocks
+### Resources & data packs (textures, sounds, recipes, loot tables, tags, advancements, worldgen)
+
+A plugin folder can contain normal resource/data pack folders:
+
+```
+plugins/ruby/
+  plugin.json  main.lua  icon.png
+  assets/ruby/textures/item/ruby.png        ← permission "resources" (textures, models, sounds.json + .ogg, lang)
+  data/ruby/recipe/ruby_block.json          ← permission "data" (recipes, loot_table, tags, advancement, worldgen, functions)
+```
+
+MC Addons merges all enabled plugins into one always-active pack ("MC Addons plugins") for the client and every world.
+For declared items/blocks it auto-generates models, blockstates, block drops and names – you only drop in the PNGs
+(`textures/item/<id>.png`, `textures/block/<id>.png`).
+
+### Items, blocks, ores & loot
 
 ```json
 "permissions": ["content"],
 "content": {
   "items":  [{ "id": "ruby", "name": "Ruby", "max_stack": 64, "food": 0, "glint": true }],
-  "blocks": [{ "id": "ruby_block", "name": "Ruby Block", "hardness": 5, "resistance": 6, "light": 10, "sound": "metal" }]
+  "blocks": [{ "id": "ruby_block", "name": "Ruby Block", "hardness": 5, "resistance": 6, "light": 10, "sound": "metal" }],
+  "ores":   [{ "block": "ruby_ore", "dimension": "overworld", "size": 5, "per_chunk": 6, "min_y": -48, "max_y": 40 }],
+  "loot":   [{ "table": "minecraft:entities/zombie", "item": "ruby", "chance": 0.05, "min": 1, "max": 1 }]
 }
 ```
 
@@ -89,7 +112,7 @@ On servers, clients need the same content plugins installed.
 | Threat | Defence |
 |---|---|
 | File/OS access | `io`, `os.*` (except `time`/`clock`), `debug`, `package`, `load*`, `dofile`, `string.dump` removed; Cobalt has no Java bridge |
-| Hanging the game | instruction budget (2M) + 250 ms watchdog per call; 5 errors in a row → auto-disable |
+| Hanging the game | instruction budget (2M) + 1 s watchdog per call; 5 errors in a row → auto-disable |
 | Abusing the game | every API function checks the permissions declared in `plugin.json`; user sees them before installing |
 | Malicious downloads | HTTPS to `raw.githubusercontent.com` only, no redirects, commit-pinned URLs, SHA-256 per file, size limits, staged install |
 | Path tricks | all paths validated (no `..`, absolute, hidden files) |
@@ -106,7 +129,8 @@ To support another Minecraft version, copy `fabric-26.3/` to `fabric-<version>/`
 
 ## Honest limits
 
-Lua plugins cannot do everything a Java mod can: no rendering-pipeline replacement (Sodium/Iris class mods), no mixins, no custom entities/GUIs yet.
+Lua plugins cannot do everything a Java mod can: no rendering-pipeline replacement (Sodium/Iris class mods), no mixins,
+no custom entity types/AI, no new dimensions, no fuel/compost values (data-driven components in 26.3).
 Those need new API surface in `Host` – the design allows adding it (API 1.x minor releases) without breaking existing plugins.
 
 ## Build & test

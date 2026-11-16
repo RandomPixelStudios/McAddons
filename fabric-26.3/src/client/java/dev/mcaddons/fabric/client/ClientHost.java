@@ -47,6 +47,16 @@ public final class ClientHost implements Host {
         return true;
     }
 
+    @Override public void openScreen(String plugin, java.util.Map<String, Object> spec) {
+        mc.execute(() -> mc.gui.setScreen(new PluginScreen(plugin, spec)));
+    }
+    @Override public void closeScreen() { mc.execute(() -> { if (mc.gui.screen() instanceof PluginScreen) mc.gui.setScreen(null); }); }
+    @Override public void sendMessage(String plugin, String player, String channel, String json) {
+        if (!net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.mcaddons.fabric.McaMessage.TYPE))
+            throw new IllegalStateException("not connected to a server with MC Addons");
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.mcaddons.fabric.McaMessage(plugin, channel, json));
+    }
+
     @Override public int screenWidth() { return mc.getWindow().getGuiScaledWidth(); }
     @Override public int screenHeight() { return mc.getWindow().getGuiScaledHeight(); }
     @Override public void bindKey(int slot, String label, String defaultKey) { Keys.bind(slot, label, defaultKey); }

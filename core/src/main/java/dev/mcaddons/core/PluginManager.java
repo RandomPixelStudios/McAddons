@@ -46,7 +46,7 @@ public final class PluginManager {
     private boolean watch = true;
 
     public PluginManager(Host host, Log log, Path root) {
-        this(host, log, root, 2_000_000L, 250L);
+        this(host, log, root, 2_000_000L, 1000L);
     }
 
     public PluginManager(Host host, Log log, Path root, long instructionLimit, long timeoutMs) {
@@ -241,6 +241,41 @@ public final class PluginManager {
         List<HudOp> ops = new ArrayList<>();
         for (Plugin p : running.values()) ops.addAll(p.hud(w, h));
         return ops;
+    }
+
+    public List<HudOp> render() {
+        List<HudOp> ops = new ArrayList<>();
+        for (Plugin p : running.values()) ops.addAll(p.render());
+        return ops;
+    }
+
+    /** Invokes a callback a plugin handed to the host (GUI button, menu click). */
+    public void callback(String pluginId, int id, Map<String, Object> data) {
+        Plugin p = running.get(pluginId);
+        if (p == null) return;
+        var fn = p.callbacks.get(id);
+        if (fn != null) p.call("callback", fn, Lua.args(data));
+    }
+
+    /** Delivers a network message to one plugin as a "message" event. */
+    public void deliver(String pluginId, String channel, String json, String player) {
+        Plugin p = running.get(pluginId);
+        if (p == null) return;
+        Object data;
+        try { data = new Gson().fromJson(json, Object.class); } catch (Exception e) { data = null; }
+        Map<String, Object> ev = new LinkedHashMap<>();
+        ev.put("channel", channel);
+        ev.put("data", normalize(data));
+        if (player != null) ev.put("player", player);
+        p.dispatch("message", ev);
+    }
+
+    /** Gson parses numbers as Double; give Lua integers where possible. */
+    private static Object normalize(Object o) {
+        if (o instanceof Double d && d == Math.rint(d) && Math.abs(d) < 1e15) return d.longValue();
+        if (o instanceof Map<?, ?> m) { Map<String, Object> r = new LinkedHashMap<>(); m.forEach((k, v) -> r.put(String.valueOf(k), normalize(v))); return r; }
+        if (o instanceof List<?> l) return l.stream().map(PluginManager::normalize).toList();
+        return o;
     }
 
     // ---------------------------------------------------------------- commands & keys ---------

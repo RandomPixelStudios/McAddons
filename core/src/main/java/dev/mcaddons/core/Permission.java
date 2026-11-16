@@ -19,7 +19,12 @@ public enum Permission {
     HUD("hud", "Draw on the screen overlay"),
     KEYS("keys", "Add key bindings"),
     STORAGE("storage", "Save its own data"),
-    CONTENT("content", "Add new items and blocks (requires restart)");
+    CONTENT("content", "Add new items, blocks, ores and loot (requires restart)"),
+    RESOURCES("resources", "Ship textures, models, sounds and translations"),
+    DATA("data", "Ship data pack files: recipes, loot tables, tags, advancements, worldgen (can change vanilla)"),
+    GUI("gui", "Open custom screens and inventory menus"),
+    NETWORK("network", "Send messages between its server and client parts"),
+    RENDER("render", "Draw lines, boxes and text in the world");
 
     public final String id;
     public final String description;

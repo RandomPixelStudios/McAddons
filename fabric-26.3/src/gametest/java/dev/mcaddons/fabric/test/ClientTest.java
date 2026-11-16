@@ -40,8 +40,10 @@ public final class ClientTest implements FabricClientGameTest {
     @Override
     public void runTest(ClientGameTestContext ctx) {
         ctx.waitForScreen(TitleScreen.class);
-        installRegistryPlugins();
-        ctx.runOnClient(mc -> McAddonsClient.manager().loadAll());
+        if (!Files.isDirectory(McAddons.ROOT.resolve("plugins/coords_hud"))) {
+            installRegistryPlugins();
+            ctx.runOnClient(mc -> McAddonsClient.manager().loadAll());
+        }
         check(ctx.computeOnClient(mc -> McAddonsClient.manager() != null), "client plugin manager started");
         check(ctx.computeOnClient(mc -> McAddonsClient.manager().runningIds().contains("coords_hud")), "client plugin coords_hud running");
         ctx.takeScreenshot("01-title");
@@ -60,11 +62,43 @@ public final class ClientTest implements FabricClientGameTest {
             sp.getServer().runCommand("give @a ruby:ruby 3");
             sp.getServer().runCommand("ruby");
             ctx.waitTicks(20);
-            if (dev.mcaddons.fabric.Content.REGISTERED.contains("ruby:ruby"))
+            boolean content = dev.mcaddons.fabric.Content.REGISTERED.contains("ruby:ruby");
+            if (content) {
+                sp.getServer().runCommand("give @a ruby:ruby 3");
+                sp.getServer().runCommand("setblock 2 -60 3 ruby:ruby_block");
+                sp.getServer().runCommand("setblock 3 -60 3 ruby:ruby_ore");
+                sp.getServer().runCommand("setblock 4 -60 3 minecraft:diamond_block");
+                ctx.waitTicks(20);
                 check(ctx.computeOnClient(mc -> mc.player.getInventory().countItem(
                         net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("ruby:ruby"))) >= 3), "plugin item ruby:ruby can be given");
-            else System.out.println("[MCA-TEST] SKIP ruby item (content plugins are registered at startup; covered by server smoke test)");
-            ctx.takeScreenshot("03-ingame-hud");
+                check(sp.getServer().computeOnServer(s -> s.getRecipeManager().byKey(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.RECIPE, net.minecraft.resources.Identifier.parse("ruby:ruby_block"))).isPresent()), "plugin recipe ruby:ruby_block loaded from data pack");
+                ctx.getInput().lookAt(new net.minecraft.core.BlockPos(3, -60, 3));
+                ctx.waitTicks(10);
+                ctx.takeScreenshot("03a-ruby-blocks");
+            } else System.out.println("[MCA-TEST] SKIP content (start with -Dmcaddons.root to preinstall)");
+
+            // waypoints: save one via its key slot, then look at it and open the manager GUI
+            // slots are assigned in load order: coords_hud=1, waypoints save=2, manage=3
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(2));
+            ctx.getInput().lookAt(0f, 30f);
+            ctx.waitTicks(40);
+            ctx.takeScreenshot("03b-waypoint-render-and-server-info-hud");
+            check(ctx.computeOnClient(mc -> McAddonsClient.manager().runningIds().contains("waypoints")), "waypoints plugin running");
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(3));
+            ctx.waitTicks(10);
+            check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof dev.mcaddons.fabric.client.PluginScreen), "Lua GUI screen opened");
+            ctx.takeScreenshot("03c-lua-gui");
+            ctx.setScreen(() -> null);
+
+            // shop: server plugin opens a chest menu for the player
+            sp.getServer().runCommand("give @a minecraft:emerald 16");
+            sp.getServer().runCommand("execute as @p run shop");
+            ctx.waitTicks(20);
+            check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.ContainerScreen), "server plugin chest menu opened");
+            ctx.takeScreenshot("03d-shop-menu");
+            ctx.setScreen(() -> null);
+            ctx.waitTicks(5);
 
             // hot reload: touch a plugin file and wait for the watcher
             Path main = McAddons.ROOT.resolve("plugins/coords_hud/main.lua");

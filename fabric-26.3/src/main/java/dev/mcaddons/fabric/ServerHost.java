@@ -61,6 +61,20 @@ public final class ServerHost implements Host {
         var it = BuiltInRegistries.ITEM.getOptional(Mc.id(item)).orElseThrow(() -> new IllegalArgumentException("unknown item " + item));
         return p(player).getInventory().add(new ItemStack(it, count));
     }
+    @Override public int countItem(String player, String item) {
+        var inv = p(player).getInventory(); var id = Mc.id(item); int n = 0;
+        for (int i = 0; i < inv.getContainerSize(); i++) { var st = inv.getItem(i); if (!st.isEmpty() && BuiltInRegistries.ITEM.getKey(st.getItem()).equals(id)) n += st.getCount(); }
+        return n;
+    }
+    @Override public int takeItem(String player, String item, int count) {
+        var inv = p(player).getInventory(); var id = Mc.id(item); int left = count;
+        for (int i = 0; i < inv.getContainerSize() && left > 0; i++) {
+            var st = inv.getItem(i);
+            if (!st.isEmpty() && BuiltInRegistries.ITEM.getKey(st.getItem()).equals(id)) { int k = Math.min(left, st.getCount()); st.shrink(k); left -= k; }
+        }
+        inv.setChanged();
+        return count - left;
+    }
     @Override public boolean setHealth(String player, float h) { ServerPlayer p = p(player); p.setHealth(Math.max(0, Math.min(h, p.getMaxHealth()))); return true; }
     @Override public boolean effect(String player, String effect, int seconds, int amp) {
         var holder = BuiltInRegistries.MOB_EFFECT.get(Mc.id(effect)).orElseThrow(() -> new IllegalArgumentException("unknown effect " + effect));
@@ -92,7 +106,8 @@ public final class ServerHost implements Host {
         return true;
     }
     @Override public boolean sound(String dim, String sound, double x, double y, double z, float v, float pitch) {
-        var ev = BuiltInRegistries.SOUND_EVENT.getOptional(Mc.id(sound)).orElseThrow(() -> new IllegalArgumentException("unknown sound " + sound));
+        var ev = BuiltInRegistries.SOUND_EVENT.getOptional(Mc.id(sound))
+                .orElseGet(() -> net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Mc.id(sound)));
         level(dim).playSound(null, x, y, z, ev, SoundSource.MASTER, v, pitch);
         return true;
     }
@@ -100,5 +115,24 @@ public final class ServerHost implements Host {
         server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command.startsWith("/") ? command.substring(1) : command);
         return true;
     }
+    @Override public boolean openMenu(String plugin, String player, String title, int rows, java.util.Map<Integer, String> items, int callback) {
+        ServerPlayer p = p(player);
+        var container = new net.minecraft.world.SimpleContainer(rows * 9);
+        items.forEach((slot, id) -> BuiltInRegistries.ITEM.getOptional(Mc.id(id)).ifPresent(i -> container.setItem(slot, new ItemStack(i))));
+        p.openMenu(new net.minecraft.world.SimpleMenuProvider((cid, inv, pl) ->
+                new PluginMenu(PluginMenu.type(rows), cid, inv, container, rows, plugin, callback), Component.literal(title)));
+        return true;
+    }
+
+    @Override public void sendMessage(String plugin, String player, String channel, String json) {
+        var msg = new McaMessage(plugin, channel, json);
+        if (player != null) net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p(player), msg);
+        else for (ServerPlayer sp : server.getPlayerList().getPlayers())
+            if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(sp, McaMessage.TYPE))
+                net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, msg);
+    }
+
+    @Override public boolean gamerule(String rule, String value) { return runCommand("gamerule " + rule + " " + value); }
+
     @Override public void commandsChanged() { ServerCommands.publish(server); }
 }

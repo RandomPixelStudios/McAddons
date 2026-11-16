@@ -44,6 +44,9 @@ public final class Plugin {
     private boolean storageDirty;
     private int errorsInARow;
     private List<HudOp> hudSink;
+    private List<HudOp> renderSink;
+    final Map<Integer, LuaValue> callbacks = new HashMap<>();
+    private int nextCallback = 1;
     private boolean closed;
 
     static final class Task {
@@ -135,6 +138,21 @@ public final class Plugin {
         return ops;
     }
 
+    List<HudOp> render() {
+        List<HudOp> ops = new ArrayList<>();
+        if (!handlers.containsKey("render")) return ops;
+        renderSink = ops;
+        try { dispatch("render", Map.of()); } finally { renderSink = null; }
+        return ops;
+    }
+
+    int registerCallback(LuaValue fn) {
+        if (callbacks.size() > 4096) callbacks.clear(); // stale GUI callbacks; keep memory bounded
+        int id = nextCallback++;
+        callbacks.put(id, fn);
+        return id;
+    }
+
     void tick(long now) {
         for (Task t : List.copyOf(tasks)) {
             if (t.cancelled) { tasks.remove(t); continue; }
@@ -216,6 +234,8 @@ public final class Plugin {
         mc.rawset("player", fn(a -> { need(Permission.PLAYERS); String n = Lua.checkStr(a.arg(1)); return hostCall(() -> host.player(n).orElse(null)); }));
         mc.rawset("teleport", fn(a -> { need(Permission.PLAYERS_MODIFY); String p = Lua.checkStr(a.arg(1)); double x = a.arg(2).checkDouble(), y = a.arg(3).checkDouble(), z = a.arg(4).checkDouble(); return hostCall(() -> host.teleport(p, x, y, z)); }));
         mc.rawset("give", fn(a -> { need(Permission.PLAYERS_MODIFY); String p = Lua.checkStr(a.arg(1)), i = Lua.checkStr(a.arg(2)); int c = a.arg(3).optInteger(1); return hostCall(() -> host.give(p, i, Math.max(1, Math.min(c, 6400)))); }));
+        mc.rawset("count_item", fn(a -> { need(Permission.PLAYERS); String p = Lua.checkStr(a.arg(1)), i = Lua.checkStr(a.arg(2)); return hostCall(() -> host.countItem(p, i)); }));
+        mc.rawset("take_item", fn(a -> { need(Permission.PLAYERS_MODIFY); String p = Lua.checkStr(a.arg(1)), i = Lua.checkStr(a.arg(2)); int c = a.arg(3).optInteger(1); return hostCall(() -> host.takeItem(p, i, Math.max(0, c))); }));
         mc.rawset("set_health", fn(a -> { need(Permission.PLAYERS_MODIFY); String p = Lua.checkStr(a.arg(1)); float h = (float) a.arg(2).checkDouble(); return hostCall(() -> host.setHealth(p, h)); }));
         mc.rawset("effect", fn(a -> { need(Permission.PLAYERS_MODIFY); String p = Lua.checkStr(a.arg(1)), e = Lua.checkStr(a.arg(2)); int s = a.arg(3).optInteger(10), amp = a.arg(4).optInteger(0); return hostCall(() -> host.effect(p, e, s, amp)); }));
 
@@ -252,6 +272,66 @@ public final class Plugin {
             return ValueFactory.valueOf(slot);
         }));
 
+
+        // ---- API 1.1 -------------------------------------------------------------------------
+        // world rendering (client, inside on("render"))
+        LuaTable render = new LuaTable();
+        render.rawset("line", fn(a -> { renderOp(new HudOp.Line(a.arg(1).checkDouble(), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), a.arg(5).checkDouble(), a.arg(6).checkDouble(), (int) a.arg(7).optLong(0xFFFFFFFFL), (float) a.arg(8).optDouble(2))); return Constants.NONE; }));
+        render.rawset("box", fn(a -> { renderOp(new HudOp.Box(a.arg(1).checkDouble(), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), a.arg(5).checkDouble(), a.arg(6).checkDouble(), (int) a.arg(7).optLong(0xFFFFFFFFL), (int) a.arg(8).optLong(0))); return Constants.NONE; }));
+        render.rawset("text", fn(a -> { renderOp(new HudOp.WorldText(clip(Lua.checkStr(a.arg(1))), a.arg(2).checkDouble(), a.arg(3).checkDouble(), a.arg(4).checkDouble(), (int) a.arg(5).optLong(0xFFFFFFFFL), (float) a.arg(6).optDouble(0.5))); return Constants.NONE; }));
+        mc.rawset("render", render);
+
+        // custom screens (client)
+        LuaTable gui = new LuaTable();
+        gui.rawset("open", fn(a -> {
+            need(Permission.GUI);
+            Object spec = Lua.toJava(a.arg(1).checkTable(), 0, this::registerCallback);
+            if (!(spec instanceof Map<?, ?> m)) throw new LuaError("gui.open expects a table with title/widgets");
+            @SuppressWarnings("unchecked") Map<String, Object> map = (Map<String, Object>) m;
+            return hostCall(() -> { host.openScreen(manifest.id, map); return null; });
+        }));
+        gui.rawset("close", fn(a -> { need(Permission.GUI); return hostCall(() -> { host.closeScreen(); return null; }); }));
+        mc.rawset("gui", gui);
+
+        // chest menus (server)
+        LuaTable menu = new LuaTable();
+        menu.rawset("open", fn(a -> {
+            need(Permission.GUI);
+            String player = Lua.checkStr(a.arg(1));
+            LuaTable spec = a.arg(2).checkTable();
+            String title = Lua.optStr(spec.rawget("title"), manifest.name);
+            int rows = Math.max(1, Math.min(6, spec.rawget("rows").optInteger(3)));
+            Map<Integer, String> items = new HashMap<>();
+            LuaValue it = spec.rawget("items");
+            if (it instanceof LuaTable t) {
+                LuaValue k = Constants.NIL;
+                while (true) {
+                    Varargs n = t.next(k); k = n.first();
+                    if (k.isNil()) break;
+                    int slot = k.checkInteger() - 1;
+                    if (slot >= 0 && slot < rows * 9) items.put(slot, Lua.checkStr(n.arg(2)));
+                }
+            }
+            LuaValue click = spec.rawget("on_click");
+            int cb = click.isNil() ? 0 : registerCallback(click.checkFunction());
+            return hostCall(() -> host.openMenu(manifest.id, player, title, rows, items, cb));
+        }));
+        mc.rawset("menu", menu);
+
+        // networking between this plugin's server and client halves
+        LuaTable net = new LuaTable();
+        net.rawset("send", fn(a -> {
+            need(Permission.NETWORK);
+            String channel = Lua.checkStr(a.arg(1));
+            String json = new Gson().toJson(Lua.toJava(a.arg(2), 0));
+            if (json.length() > 32_000) throw new LuaError("message too large (max 32 KB)");
+            String player = a.arg(3).isNil() ? null : Lua.checkStr(a.arg(3));
+            return hostCall(() -> { host.sendMessage(manifest.id, player, channel, json); return null; });
+        }));
+        mc.rawset("net", net);
+
+        world.rawset("gamerule", fn(a -> { need(Permission.WORLD_WRITE); String r = Lua.checkStr(a.arg(1)); if (!r.matches("[a-zA-Z0-9_.:]+")) throw new LuaError("bad rule"); if (a.arg(2).isNil()) throw new LuaError("value required"); String v = a.arg(2).toString(); if (!v.matches("[a-zA-Z0-9_.-]+")) throw new LuaError("bad value"); return hostCall(() -> host.gamerule(r, v)); }));
+
         // storage
         LuaTable store = new LuaTable();
         store.rawset("get", fn(a -> { need(Permission.STORAGE); return Lua.of(storage().get(Lua.checkStr(a.arg(1)))); }));
@@ -286,6 +366,12 @@ public final class Plugin {
         need(Permission.HUD);
         if (hudSink == null) throw new LuaError("mc.hud.* can only be used inside an on('hud') handler");
         if (hudSink.size() < 512) hudSink.add(op);
+    }
+
+    private void renderOp(HudOp op) throws LuaError {
+        need(Permission.RENDER);
+        if (renderSink == null) throw new LuaError("mc.render.* can only be used inside an on('render') handler");
+        if (renderSink.size() < 1024) renderSink.add(op);
     }
 
     private static String clip(String s) { return s.length() > 256 ? s.substring(0, 256) : s; }

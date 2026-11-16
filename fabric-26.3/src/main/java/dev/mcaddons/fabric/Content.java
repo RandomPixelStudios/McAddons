@@ -30,7 +30,15 @@ public final class Content {
     public static final List<String> REGISTERED = new ArrayList<>();
 
     public static void registerAll(Path root) {
-        for (Manifest m : PluginManager.enabledManifests(root, Mc.LOG)) {
+        List<Manifest> manifests = PluginManager.enabledManifests(root, Mc.LOG);
+        registerContent(manifests);
+        registerWorldgenAndLoot(manifests);
+        registerCreativeTab();
+        PluginPack.build(manifests);
+    }
+
+    private static void registerContent(List<Manifest> manifests) {
+        for (Manifest m : manifests) {
             if (!m.permissions.contains("content")) continue;
             for (Manifest.ItemDef def : m.content.items) {
                 Identifier id = Identifier.fromNamespaceAndPath(m.id, def.id);
@@ -56,6 +64,48 @@ public final class Content {
             }
         }
         if (!REGISTERED.isEmpty()) Mc.LOG.info("Registered plugin content: " + REGISTERED);
+    }
+
+    private static void registerWorldgenAndLoot(List<Manifest> manifests) {
+        for (Manifest m : manifests) {
+            if (!m.permissions.contains("content")) continue;
+            int n = 0;
+            for (Manifest.OreDef o : m.content.ores) {
+                ResourceKey<net.minecraft.world.level.levelgen.placement.PlacedFeature> key = ResourceKey.create(
+                        Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(m.id, "ore_" + (n++)));
+                var selector = switch (o.dimension) {
+                    case "nether" -> net.fabricmc.fabric.api.biome.v1.BiomeSelectors.foundInTheNether();
+                    case "end" -> net.fabricmc.fabric.api.biome.v1.BiomeSelectors.foundInTheEnd();
+                    default -> net.fabricmc.fabric.api.biome.v1.BiomeSelectors.foundInOverworld();
+                };
+                net.fabricmc.fabric.api.biome.v1.BiomeModifications.addFeature(selector,
+                        net.minecraft.world.level.levelgen.GenerationStep.Decoration.UNDERGROUND_ORES, key);
+            }
+            for (Manifest.LootDef l : m.content.loot) {
+                Identifier table = Mc.id(l.table);
+                Identifier item = Mc.id(m.qualify(l.item));
+                net.fabricmc.fabric.api.loot.v3.LootTableEvents.MODIFY.register((key, builder, source, lookup) -> {
+                    if (!key.identifier().equals(table)) return;
+                    var it = BuiltInRegistries.ITEM.getOptional(item);
+                    if (it.isEmpty()) { Mc.LOG.warn(m.id + ": loot item not found " + item); return; }
+                    builder.withPool(net.minecraft.world.level.storage.loot.LootPool.lootPool()
+                            .add(net.minecraft.world.level.storage.loot.entries.LootItem.lootTableItem(it.get())
+                                    .apply(net.minecraft.world.level.storage.loot.functions.SetItemCountFunction.setCount(
+                                            net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders.between(l.min, Math.max(l.min, l.max)))))
+                            .when(net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition.randomChance(Math.max(0f, Math.min(1f, l.chance)))));
+                });
+            }
+        }
+    }
+
+    private static void registerCreativeTab() {
+        if (REGISTERED.isEmpty()) return;
+        var key = ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.fromNamespaceAndPath("mcaddons", "plugins"));
+        Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, key, net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab.builder()
+                .title(Component.literal("Plugins"))
+                .icon(() -> new net.minecraft.world.item.ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(REGISTERED.get(0)))))
+                .displayItems((params, out) -> REGISTERED.forEach(id -> out.accept(BuiltInRegistries.ITEM.getValue(Identifier.parse(id)))))
+                .build());
     }
 
     private static SoundType sound(String s) {

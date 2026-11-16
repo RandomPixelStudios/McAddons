@@ -13,7 +13,10 @@ loom {
         }
     }
     runs {
-        configureEach { runDir = '../run' }
+        configureEach {
+            runDir = '../run'
+            if (System.getenv('MCADDONS_ROOT')) vmArg "-Dmcaddons.root=${System.getenv('MCADDONS_ROOT')}"
+        }
         server { programArgs '--nogui' }
     }
 }

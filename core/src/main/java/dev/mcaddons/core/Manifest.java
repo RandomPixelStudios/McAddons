@@ -32,6 +32,27 @@ public final class Manifest {
     public static final class Content {
         public List<ItemDef> items = new ArrayList<>();
         public List<BlockDef> blocks = new ArrayList<>();
+        public List<OreDef> ores = new ArrayList<>();
+        public List<LootDef> loot = new ArrayList<>();
+    }
+
+    /** World generation: places a block like an ore. */
+    public static final class OreDef {
+        public String block;                       // "ruby_ore" (own) or "minecraft:..." / "plugin:..."
+        public String dimension = "overworld";     // overworld | nether | end
+        public int size = 6;
+        @SerializedName("per_chunk") public int perChunk = 4;
+        @SerializedName("min_y") public int minY = -64;
+        @SerializedName("max_y") public int maxY = 48;
+    }
+
+    /** Adds an extra drop to an existing loot table. */
+    public static final class LootDef {
+        public String table;          // e.g. "minecraft:blocks/grass_block" or "minecraft:entities/zombie"
+        public String item;           // own id or full id
+        public float chance = 1f;
+        public int min = 1;
+        public int max = 1;
     }
 
     public static final class ItemDef {
@@ -78,9 +99,23 @@ public final class Manifest {
             if (i.id == null || !ID.matcher(i.id).matches()) throw new PluginException("bad item id " + i.id);
         for (BlockDef b : content.blocks)
             if (b.id == null || !ID.matcher(b.id).matches()) throw new PluginException("bad block id " + b.id);
-        if ((!content.items.isEmpty() || !content.blocks.isEmpty()) && !permissions.contains("content"))
-            throw new PluginException("plugins adding items/blocks must request the 'content' permission");
+        if (content.ores == null) content.ores = new ArrayList<>();
+        if (content.loot == null) content.loot = new ArrayList<>();
+        for (OreDef o : content.ores) {
+            if (o.block == null || o.block.isBlank()) throw new PluginException("ore needs a block");
+            o.size = Math.max(1, Math.min(o.size, 32));
+            o.perChunk = Math.max(1, Math.min(o.perChunk, 64));
+            if (o.minY > o.maxY) throw new PluginException("ore min_y > max_y");
+        }
+        for (LootDef l : content.loot)
+            if (l.table == null || l.item == null) throw new PluginException("loot entry needs table and item");
+        boolean any = !content.items.isEmpty() || !content.blocks.isEmpty() || !content.ores.isEmpty() || !content.loot.isEmpty();
+        if (any && !permissions.contains("content"))
+            throw new PluginException("plugins adding items/blocks/ores/loot must request the 'content' permission");
     }
+
+    /** Resolves "ruby_ore" to "<plugin>:ruby_ore", keeps namespaced ids. */
+    public String qualify(String id) { return id.contains(":") ? id : this.id + ":" + id; }
 
     public Side sideEnum() { return Side.parse(side); }
 

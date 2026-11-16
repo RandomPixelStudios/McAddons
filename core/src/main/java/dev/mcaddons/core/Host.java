@@ -22,6 +22,9 @@ public interface Host {
     default void actionbar(String player, String message) { unsupported("actionbar"); }
     default boolean teleport(String player, double x, double y, double z) { return unsupported("teleport"); }
     default boolean give(String player, String item, int count) { return unsupported("give"); }
+    default int countItem(String player, String item) { unsupported("count_item"); return 0; }
+    /** Removes up to count items; returns how many were removed. */
+    default int takeItem(String player, String item, int count) { unsupported("take_item"); return 0; }
     default boolean setHealth(String player, float health) { return unsupported("set_health"); }
     default boolean effect(String player, String effect, int seconds, int amplifier) { return unsupported("effect"); }
 
@@ -46,6 +49,16 @@ public interface Host {
     default int screenWidth() { return 0; }
     default int screenHeight() { return 0; }
     default void bindKey(int slot, String label, String defaultKey) {}
+
+    // -- GUI / menus / network / rules (API 1.1) ----------------------------------------------
+    /** Client: opens a screen described by plain data; callbacks are ids for {@link PluginManager#callback}. */
+    default void openScreen(String pluginId, java.util.Map<String, Object> spec) { unsupported("gui.open"); }
+    default void closeScreen() { unsupported("gui.close"); }
+    /** Server: opens a chest-style menu. items: slot(0-based) -> item id. Clicks go to callback id. */
+    default boolean openMenu(String pluginId, String player, String title, int rows, java.util.Map<Integer, String> items, int callback) { return unsupported("menu.open"); }
+    /** Sends a message to the same plugin on the other side. player == null: server→all players / client→server. */
+    default void sendMessage(String pluginId, String player, String channel, String json) { unsupported("net.send"); }
+    default boolean gamerule(String rule, String value) { return unsupported("gamerule"); }
 
     default boolean unsupported(String what) {
         throw new UnsupportedOperationException(what + " is not available on the " + side().name().toLowerCase() + " side");
