@@ -22,9 +22,26 @@ public final class ClientTest implements FabricClientGameTest {
         System.out.println("[MCA-TEST] PASS " + what);
     }
 
+    /** Copies ../registry/plugins (checked out next to the project) into the test game dir. */
+    private static void installRegistryPlugins() {
+        Path src = Path.of(System.getProperty("user.dir")).resolve("../../../../registry/plugins").normalize();
+        Path dst = McAddons.ROOT.resolve("plugins");
+        try (var walk = Files.walk(src)) {
+            for (Path f : walk.toList()) {
+                Path t = dst.resolve(src.relativize(f).toString());
+                if (Files.isDirectory(f)) Files.createDirectories(t);
+                else Files.copy(f, t, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("cannot install test plugins from " + src, e);
+        }
+    }
+
     @Override
     public void runTest(ClientGameTestContext ctx) {
         ctx.waitForScreen(TitleScreen.class);
+        installRegistryPlugins();
+        ctx.runOnClient(mc -> McAddonsClient.manager().loadAll());
         check(ctx.computeOnClient(mc -> McAddonsClient.manager() != null), "client plugin manager started");
         check(ctx.computeOnClient(mc -> McAddonsClient.manager().runningIds().contains("coords_hud")), "client plugin coords_hud running");
         ctx.takeScreenshot("01-title");
