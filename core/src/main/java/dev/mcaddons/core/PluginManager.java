@@ -143,6 +143,7 @@ public final class PluginManager {
 
     private void release(Plugin p) {
         commandOwners.values().removeIf(o -> o == p);
+        try { host.removeMenuButtons(p.id()); } catch (RuntimeException ignored) {}
         for (int i = 1; i <= KEY_SLOTS; i++) if (keyOwners[i] == p) { keyOwners[i] = null; host.bindKey(i, null, null); }
         host.commandsChanged();
     }

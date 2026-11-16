@@ -16,14 +16,14 @@ public class SodiumLevelSliceMixin {
     @Inject(method = "getBlockState(III)Lnet/minecraft/world/level/block/state/BlockState;", at = @At("RETURN"), cancellable = true, require = 0)
     private void mcaddons$hideXyz(int x, int y, int z, CallbackInfoReturnable<BlockState> cir) {
         if (!BlockHiding.active()) return;
-        BlockState s = cir.getReturnValue(), f = BlockHiding.filter(s);
+        BlockState s = cir.getReturnValue(), f = BlockHiding.filter(s, x, y, z);
         if (f != s) cir.setReturnValue(f);
     }
 
     @Inject(method = "getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;", at = @At("RETURN"), cancellable = true, require = 0)
     private void mcaddons$hidePos(BlockPos pos, CallbackInfoReturnable<BlockState> cir) {
         if (!BlockHiding.active()) return;
-        BlockState s = cir.getReturnValue(), f = BlockHiding.filter(s);
+        BlockState s = cir.getReturnValue(), f = BlockHiding.filter(s, pos.getX(), pos.getY(), pos.getZ());
         if (f != s) cir.setReturnValue(f);
     }
 }

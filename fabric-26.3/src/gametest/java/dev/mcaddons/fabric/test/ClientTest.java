@@ -24,10 +24,16 @@ public final class ClientTest implements FabricClientGameTest {
 
     /** Copies ../registry/plugins (checked out next to the project) into the test game dir. */
     private static void installRegistryPlugins() {
-        Path src = Path.of(System.getProperty("user.dir")).resolve("../../../../registry/plugins").normalize();
+        Path base = Path.of(System.getProperty("user.dir")).resolve("../../../..").normalize();
+        copyPlugins(base.resolve("registry/plugins"));
+        copyPlugins(base.resolve("test-plugins"));
+    }
+
+    private static void copyPlugins(Path src) {
         Path dst = McAddons.ROOT.resolve("plugins");
         try (var walk = Files.walk(src)) {
             for (Path f : walk.toList()) {
+                if (src.relativize(f).toString().startsWith("selftest")) continue;
                 Path t = dst.resolve(src.relativize(f).toString());
                 if (Files.isDirectory(f)) Files.createDirectories(t);
                 else Files.copy(f, t, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -91,39 +97,34 @@ public final class ClientTest implements FabricClientGameTest {
             ctx.takeScreenshot("03c-lua-gui");
             ctx.setScreen(() -> null);
 
-            // X To Xray plugin: bury ores and a chest, toggle (slot 4 = coords 1, waypoints 2+3, xtoxray 4+5)
+            // X To Xray plugin (uses built-in block hiding): slots coords_hud=1, waypoints=2,3, xtoxray=4
             sp.getServer().runCommand("fill -6 -64 -6 6 -61 6 minecraft:stone");
             sp.getServer().runCommand("setblock 2 -63 -4 minecraft:diamond_ore");
             sp.getServer().runCommand("setblock -3 -62 -5 minecraft:gold_ore");
             sp.getServer().runCommand("setblock 0 -64 -6 minecraft:chest");
             ctx.waitTicks(10);
-            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
-            ctx.getInput().lookAt(180f, 45f);
-            ctx.waitTicks(60);
-            ctx.takeScreenshot("03e-xtoxray");
-            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(5));
-            ctx.waitTicks(10);
-            check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof dev.mcaddons.fabric.client.PluginScreen), "X To Xray settings screen opened");
-            ctx.takeScreenshot("03f-xtoxray-settings");
-            ctx.setScreen(() -> null);
-            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
-
-            // built-in block hiding (X-ray via chunk mesh mixin)
             check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.allowed()), "block hiding allowed in singleplayer");
-            ctx.runOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.toggle());
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
             ctx.getInput().lookAt(180f, 60f);
             ctx.waitTicks(40);
             sp.getConnection().waitForChunksRender();
-            check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.active()), "block hiding active");
+            check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.active()), "X To Xray toggled block hiding on");
             check(ctx.computeOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.filter(
-                    net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()).isAir()), "stone hidden in X-ray mode");
-            ctx.takeScreenshot("03g-block-hiding-xray");
-            ctx.setScreen(() -> new dev.mcaddons.fabric.client.BlockHidingScreen(null));
-            ctx.waitTicks(5);
-            ctx.takeScreenshot("03h-block-hiding-settings");
+                    net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 0, -62, 0).isAir()), "stone hidden");
+            ctx.takeScreenshot("03e-xtoxray-ingame");
+            check(ctx.computeOnClient(mc -> McAddonsClient.MENU_BUTTONS.stream().anyMatch(b -> b.label().equals("X To Xray Config"))), "X To Xray menu button registered");
+            ctx.runOnClient(mc -> { var b = McAddonsClient.MENU_BUTTONS.get(0); McAddonsClient.manager().callback(b.plugin(), b.callback(), java.util.Map.of()); });
+            ctx.waitTicks(10);
+            check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof dev.mcaddons.fabric.client.PluginScreen), "X To Xray config screen opened");
+            ctx.takeScreenshot("03f-xtoxray-config");
             ctx.setScreen(() -> null);
-            ctx.runOnClient(mc -> dev.mcaddons.fabric.client.BlockHiding.toggle());
+            ctx.runOnClient(mc -> McAddonsClient.manager().pressKey(4));
             ctx.waitTicks(5);
+            check(ctx.computeOnClient(mc -> !dev.mcaddons.fabric.client.BlockHiding.active()), "X To Xray toggled off");
+            ctx.setScreen(() -> new net.minecraft.client.gui.screens.PauseScreen(true));
+            ctx.waitTicks(5);
+            ctx.takeScreenshot("03g-pause-menu");
+            ctx.setScreen(() -> null);
 
             // shop: server plugin opens a chest menu for the player
             sp.getServer().runCommand("give @a minecraft:emerald 16");

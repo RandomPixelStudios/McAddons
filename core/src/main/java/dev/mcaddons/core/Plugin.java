@@ -291,6 +291,12 @@ public final class Plugin {
             @SuppressWarnings("unchecked") Map<String, Object> map = (Map<String, Object>) m;
             return hostCall(() -> { host.openScreen(manifest.id, map); return null; });
         }));
+        gui.rawset("menu_button", fn(a -> {
+            need(Permission.GUI);
+            String label = Lua.checkStr(a.arg(1));
+            int cb = registerCallback(a.arg(2).checkFunction());
+            return hostCall(() -> { host.addMenuButton(manifest.id, label, cb); return null; });
+        }));
         gui.rawset("close", fn(a -> { need(Permission.GUI); return hostCall(() -> { host.closeScreen(); return null; }); }));
         mc.rawset("gui", gui);
 
@@ -318,6 +324,19 @@ public final class Plugin {
             return hostCall(() -> host.openMenu(manifest.id, player, title, rows, items, cb));
         }));
         mc.rawset("menu", menu);
+
+        // block hiding (X-ray) – engine and server permission live in MC Addons itself
+        LuaTable bh = new LuaTable();
+        bh.rawset("allowed", fn(a -> { need(Permission.BLOCKHIDING); return hostCall(host::hidingAllowed); }));
+        bh.rawset("active", fn(a -> { need(Permission.BLOCKHIDING); return hostCall(host::hidingActive); }));
+        bh.rawset("set_active", fn(a -> { need(Permission.BLOCKHIDING); boolean v = a.arg(1).toBoolean(); return hostCall(() -> host.hidingSetActive(v)); }));
+        bh.rawset("configure", fn(a -> {
+            need(Permission.BLOCKHIDING);
+            @SuppressWarnings("unchecked") Map<String, Object> cfg = (Map<String, Object>) Lua.toJava(a.arg(1).checkTable(), 0);
+            return hostCall(() -> { host.hidingConfigure(cfg); return null; });
+        }));
+        bh.rawset("allow", fn(a -> { need(Permission.BLOCKHIDING); String p = Lua.checkStr(a.arg(1)); boolean v = a.arg(2).isNil() || a.arg(2).toBoolean(); return hostCall(() -> { host.hidingAllow(p, v); return null; }); }));
+        mc.rawset("blockhiding", bh);
 
         // networking between this plugin's server and client halves
         LuaTable net = new LuaTable();

@@ -41,6 +41,8 @@ public final class BlockHiding {
         public List<String> hide = new ArrayList<>(List.of("minecraft:grass_block", "minecraft:short_grass", "minecraft:tall_grass"));
         public int radius_chunks = 16;
         public boolean night_vision = true;
+        public int range = 0;                 // blocks from the player, 0 = everywhere
+        public boolean while_moving = true;   // false: show the world normally while moving
     }
 
     private static final Path FILE = McAddons.ROOT.resolve("block-hiding.json");
@@ -50,6 +52,9 @@ public final class BlockHiding {
     private static volatile Set<Block> blocks = Set.of();
     private static volatile boolean xrayMode = true;
     private static SectionPos lastPos;
+    private static volatile boolean renderingEnabled = true;
+    private static volatile int range;
+    private static volatile int px, py, pz;
 
     public static Config config() {
         if (config == null) {
@@ -78,6 +83,29 @@ public final class BlockHiding {
         for (String id : xrayMode ? config.xray : config.hide)
             BuiltInRegistries.BLOCK.getOptional(Mc.id(id)).ifPresent(set::add);
         blocks = Set.copyOf(set);
+        range = Math.max(0, config.range);
+    }
+
+    /** Used by plugins (mc.blockhiding.configure). Unknown keys are ignored. */
+    @SuppressWarnings("unchecked")
+    public static void configure(java.util.Map<String, Object> cfg) {
+        Config c = config();
+        if (cfg.get("mode") instanceof String m) c.mode = m.equals("hide") ? "hide" : "xray";
+        if (cfg.get("blocks") instanceof List<?> l) {
+            List<String> ids = new ArrayList<>();
+            for (Object o : l) if (o != null) ids.add(String.valueOf(o));
+            if ("hide".equals(c.mode)) c.hide = ids; else c.xray = ids;
+        }
+        if (cfg.get("range") instanceof Number n) c.range = Math.max(0, n.intValue());
+        if (cfg.get("night_vision") instanceof Boolean b) c.night_vision = b;
+        if (cfg.get("while_moving") instanceof Boolean b) c.while_moving = b;
+        save();
+        nightVision(Minecraft.getInstance());
+    }
+
+    public static boolean setActive(boolean on) {
+        if (on != active) toggle();
+        return active;
     }
 
     public static boolean active() { return active; }
@@ -88,8 +116,12 @@ public final class BlockHiding {
     }
 
     /** Called by the mixins for every block the chunk mesher reads. Must be fast. */
-    public static BlockState filter(BlockState state) {
-        if (!active || state == null || state.isAir()) return state;
+    public static BlockState filter(BlockState state) { return filter(state, px, py, pz); }
+
+    public static BlockState filter(BlockState state, int x, int y, int z) {
+        if (!active || !renderingEnabled || state == null || state.isAir()) return state;
+        int r = range;
+        if (r > 0 && (Math.abs(x - px) > r || Math.abs(y - py) > r || Math.abs(z - pz) > r)) return state;
         boolean listed = blocks.contains(state.getBlock());
         return (xrayMode != listed) ? Blocks.AIR.defaultBlockState() : state;
     }
@@ -102,6 +134,9 @@ public final class BlockHiding {
             return;
         }
         config();
+        var bp = mc.player.blockPosition();
+        px = bp.getX(); py = bp.getY(); pz = bp.getZ();
+        renderingEnabled = true;
         active = !active;
         nightVision(mc);
         mc.player.sendOverlayMessage(Component.literal(active ? "§aBlock hiding ON (" + (xrayMode ? "X-ray" : "hide list") + ")" : "§cBlock hiding OFF"));
@@ -112,7 +147,7 @@ public final class BlockHiding {
     static void nightVision(Minecraft mc) {
         if (mc.player == null) return;
         var nv = net.minecraft.world.effect.MobEffects.NIGHT_VISION;
-        if (active && config().night_vision) mc.player.addEffect(new net.minecraft.world.effect.MobEffectInstance(nv, -1, 0, false, false, false));
+        if (active && renderingEnabled && config().night_vision) mc.player.addEffect(new net.minecraft.world.effect.MobEffectInstance(nv, -1, 0, false, false, false));
         else if (mc.player.hasEffect(nv) && mc.player.getEffect(nv).getDuration() == -1) mc.player.removeEffect(nv);
     }
 
@@ -126,8 +161,20 @@ public final class BlockHiding {
     static void tick(Minecraft mc) {
         if (!active || mc.player == null) return;
         if (!allowed()) { active = false; nightVision(mc); rebuild(); return; }
-        SectionPos pos = SectionPos.of(mc.player.blockPosition());
-        if (!pos.equals(lastPos)) { lastPos = pos; } // meshes rebuild naturally when new chunks load
+        var bp = mc.player.blockPosition();
+        px = bp.getX(); py = bp.getY(); pz = bp.getZ();
+        if (!config().while_moving) {
+            boolean moving = mc.player.getDeltaMovement().lengthSqr() > 0.01;
+            if (renderingEnabled == moving) {   // state changed
+                renderingEnabled = !moving;
+                rebuild();
+                nightVision(mc);
+            }
+        } else {
+            renderingEnabled = true;
+            SectionPos pos = SectionPos.of(bp);
+            if (range > 0 && !pos.equals(lastPos)) { lastPos = pos; rebuild(); }
+        }
     }
 
     /** Marks all loaded sections dirty so they are meshed again with/without the filter. */

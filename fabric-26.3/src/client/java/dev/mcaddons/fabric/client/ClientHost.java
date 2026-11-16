@@ -57,6 +57,13 @@ public final class ClientHost implements Host {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.mcaddons.fabric.McaMessage(plugin, channel, json));
     }
 
+    @Override public void addMenuButton(String plugin, String label, int callback) { McAddonsClient.MENU_BUTTONS.add(new McAddonsClient.MenuButton(plugin, label, callback)); }
+    @Override public void removeMenuButtons(String plugin) { McAddonsClient.MENU_BUTTONS.removeIf(b -> b.plugin().equals(plugin)); }
+    @Override public boolean hidingAllowed() { return BlockHiding.allowed(); }
+    @Override public boolean hidingActive() { return BlockHiding.active(); }
+    @Override public boolean hidingSetActive(boolean on) { return BlockHiding.setActive(on); }
+    @Override public void hidingConfigure(java.util.Map<String, Object> cfg) { BlockHiding.configure(cfg); }
+
     @Override public boolean singleplayer() { return mc.hasSingleplayerServer(); }
     @Override public int screenWidth() { return mc.getWindow().getGuiScaledWidth(); }
     @Override public int screenHeight() { return mc.getWindow().getGuiScaledHeight(); }

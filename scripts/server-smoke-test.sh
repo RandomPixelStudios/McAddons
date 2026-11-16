@@ -11,7 +11,7 @@ echo "eula=true" > run/eula.txt
 printf "online-mode=false\nlevel-seed=42\n" > run/server.properties
 timeout 600 ./gradlew :fabric-26.3:runServer | tee run/server-test.log
 grep -q "SELFTEST RESULT: ALL PASSED" run/server-test.log
-grep -q "Installed Welcome" run/server-test.log
+grep -q "Installed X To Xray" run/server-test.log
 grep -q "WORLDGEN OK" run/server-test.log
 grep -q "Block hiding is now allowed for everyone" run/server-test.log
 echo "SMOKE TEST PASSED (API checks + worldgen + GitHub install)"

@@ -30,6 +30,10 @@ import java.util.Map;
 public final class McAddonsClient implements ClientModInitializer {
     private static PluginManager client;
 
+    public record MenuButton(String plugin, String label, int callback) {}
+    /** Buttons plugins added to the title / pause screen (mc.gui.menu_button). */
+    public static final java.util.List<MenuButton> MENU_BUTTONS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
     public static PluginManager manager() { return client; }
 
     @Override
@@ -81,8 +85,19 @@ public final class McAddonsClient implements ClientModInitializer {
 
         ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
             if (!(screen instanceof TitleScreen) && !(screen instanceof PauseScreen)) return;
-            Screens.getWidgets(screen).add(Button.builder(Component.literal("Plugins"),
+            var widgets = Screens.getWidgets(screen);
+            widgets.add(Button.builder(Component.literal("Plugins"),
                     b -> mc.gui.setScreen(new PluginBrowserScreen(screen))).bounds(w - 84, 6, 78, 20).build());
+            // plugin buttons go below the lowest vanilla button, like X To Xray's config button
+            int bottom = 0;
+            for (var wd : widgets) if (wd instanceof net.minecraft.client.gui.components.AbstractWidget aw && aw.getX() < w / 2 && aw.getX() + aw.getWidth() > w / 2)
+                bottom = Math.max(bottom, aw.getY() + aw.getHeight());
+            int y = bottom > 0 ? bottom + 4 : h / 4 + 120;
+            for (MenuButton mb : MENU_BUTTONS) {
+                widgets.add(Button.builder(Component.literal(mb.label()), b -> { if (client != null) client.callback(mb.plugin(), mb.callback(), Map.of()); })
+                        .bounds(w / 2 - 102, y, 204, 20).build());
+                y += 24;
+            }
         });
     }
 

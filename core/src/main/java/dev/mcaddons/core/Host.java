@@ -60,6 +60,19 @@ public interface Host {
     default boolean openMenu(String pluginId, String player, String title, int rows, java.util.Map<Integer, String> items, int callback) { return unsupported("menu.open"); }
     /** Sends a message to the same plugin on the other side. player == null: server→all players / client→server. */
     default void sendMessage(String pluginId, String player, String channel, String json) { unsupported("net.send"); }
+    /** Adds a button to the title and pause screen (client). */
+    default void addMenuButton(String pluginId, String label, int callback) { unsupported("gui.menu_button"); }
+    default void removeMenuButtons(String pluginId) {}
+
+    // -- block hiding (engine lives in the adapter; permission enforced there) ------------------
+    default boolean hidingAllowed() { return unsupported("blockhiding"); }
+    default boolean hidingActive() { return unsupported("blockhiding"); }
+    default boolean hidingSetActive(boolean active) { return unsupported("blockhiding"); }
+    /** cfg: mode ("xray"|"hide"), blocks (list), range (blocks, 0 = all), night_vision, while_moving */
+    default void hidingConfigure(java.util.Map<String, Object> cfg) { unsupported("blockhiding"); }
+    /** Server: allow/deny block hiding for one player (sent to their client). */
+    default void hidingAllow(String player, boolean allowed) { unsupported("blockhiding.allow"); }
+
     default boolean gamerule(String rule, String value) { return unsupported("gamerule"); }
 
     default boolean unsupported(String what) {

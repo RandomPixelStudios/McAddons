@@ -24,7 +24,8 @@ public enum Permission {
     DATA("data", "Ship data pack files: recipes, loot tables, tags, advancements, worldgen (can change vanilla)"),
     GUI("gui", "Open custom screens and inventory menus"),
     NETWORK("network", "Send messages between its server and client parts"),
-    RENDER("render", "Draw lines, boxes and text in the world");
+    RENDER("render", "Draw lines, boxes and text in the world"),
+    BLOCKHIDING("blockhiding", "Hide blocks / X-ray (singleplayer; on servers the server half can allow it)");
 
     public final String id;
     public final String description;

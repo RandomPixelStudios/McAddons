@@ -21,9 +21,11 @@ public record HidingAllowed(boolean allowed) implements CustomPacketPayload {
         return !c.block_hiding_ops_only || p.level().getServer().getPlayerList().isOp(p.nameAndId());
     }
 
-    static void send(ServerPlayer p) {
+    static void send(ServerPlayer p) { send(p, allowedFor(p)); }
+
+    static void send(ServerPlayer p, boolean allowed) {
         if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, TYPE))
-            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new HidingAllowed(allowedFor(p)));
+            net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new HidingAllowed(allowed));
     }
 
     /** Re-sends the permission to everyone (after /mca blockhiding). */

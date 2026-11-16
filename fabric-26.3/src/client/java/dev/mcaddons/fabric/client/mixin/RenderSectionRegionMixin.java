@@ -15,7 +15,7 @@ public class RenderSectionRegionMixin {
             at = @At("RETURN"), cancellable = true)
     private void mcaddons$hide(BlockPos pos, CallbackInfoReturnable<BlockState> cir) {
         if (!BlockHiding.active()) return;
-        BlockState s = cir.getReturnValue(), f = BlockHiding.filter(s);
+        BlockState s = cir.getReturnValue(), f = BlockHiding.filter(s, pos.getX(), pos.getY(), pos.getZ());
         if (f != s) cir.setReturnValue(f);
     }
 }

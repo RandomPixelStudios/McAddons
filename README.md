@@ -7,7 +7,7 @@
 * **Secure sandbox** – no `io`, `os`, `debug`, `load`, no Java access, per-call instruction budget + timeout, declared permissions, path-checked `require`.
 * **Plugin browser** – press **K** (or *Plugins* on the title/pause screen). Index comes from
   [RandomPixelStudios/McAddons-Plugins](https://github.com/RandomPixelStudios/McAddons-Plugins); files are SHA-256 verified.
-* **Version independent** – plugins only talk to the stable `mc.*` API (versioned separately, currently **1.1**).
+* **Version independent** – plugins only talk to the stable `mc.*` API (versioned separately, currently **1.2**).
   Each Minecraft version gets a small adapter module (`fabric-26.3/`); plugins never touch Minecraft classes, so the same plugin runs everywhere an adapter exists.
 * **Real content** – plugins can add items and blocks (declared in `plugin.json`), HUD overlays, key bindings, commands, world edits, events with cancellation.
 
@@ -26,7 +26,7 @@ Plugins live in `.minecraft/mcaddons/plugins/<id>/`.
 
 ## Built-in block hiding (X-ray)
 
-Press **X** (or *Block hiding* in the plugin browser). Same technique as X To Xray: chunk meshes are rebuilt and blocks are swapped for air by a mixin (Sodium supported).
+Bind a key under Controls → MC Addons, use *Block Hiding* in the plugin browser, or install the **X To Xray** plugin (key X, original config screen). Same technique as X To Xray: chunk meshes are rebuilt and blocks are swapped for air by a mixin (Sodium supported).
 
 * **Mode X-ray:** only listed blocks stay visible (default: ores, chests, spawners, water, lava).
 * **Mode hide:** listed blocks become invisible (e.g. grass, leaves).
@@ -79,10 +79,13 @@ Edit, save → reloaded. Publish with a pull request to the registry repo.
 | `mc.storage.get(k)`, `.set(k, v)`, `.keys()` | `storage` | JSON-persisted per plugin, survives reloads |
 | `mc.count_item(p, item)` / `mc.take_item(p, item, n)` | `players` / `players.modify` | inventory checks, e.g. for shops |
 | `mc.render.line(x1,y1,z1,x2,y2,z2,argb,width,through_walls)`, `mc.render.box(x1,y1,z1,x2,y2,z2,argb,fill,through_walls)`, `mc.render.text(s,x,y,z,argb,scale)` | `render` | client, only inside `on("render")`; drawn in the world |
-| `mc.gui.open{title, width, height, widgets, on_close}`, `mc.gui.close()` | `gui` | client screens: `label`, `button` (on_click gets `e.inputs`), `input`, `item`, `rect` |
+| `mc.gui.open{title, width, height, widgets, on_close}`, `mc.gui.close()` | `gui` | vanilla-style screens: `label`, `button`, `input`, `checkbox`, `slider`, `slot`, `item`, `separator`; `fullscreen = true` for absolute layout |
 | `mc.menu.open(player, {title, rows, items = {[slot]=id}, on_click})` | `gui` | server chest menus (shops, selectors); items can't be taken |
 | `mc.net.send(channel, data [, player])` | `network` | talks to the other half of the same plugin → `on("message", fn(e))` |
 | `mc.world.gamerule(name, value)` | `world.write` | |
+| `mc.gui.menu_button(label, fn)` | `gui` | adds a button to the title and pause screen |
+| `mc.blockhiding.configure{mode, blocks, range, night_vision, while_moving}`, `.set_active(b)`, `.active()`, `.allowed()` | `blockhiding` | client: drives the built-in block hiding (X-ray) |
+| `mc.blockhiding.allow(player, true)` | `blockhiding` | server: lets that player use block hiding on this server |
 | `require("module")` | – | loads `module.lua` from the plugin folder only |
 | `mc.api_version`, `mc.minecraft_version`, `mc.side`, `mc.plugin`, `mc.content`, `mc.has_permission(p)` | – | |
 

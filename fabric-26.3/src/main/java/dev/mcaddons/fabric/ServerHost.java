@@ -132,6 +132,8 @@ public final class ServerHost implements Host {
                 net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(sp, msg);
     }
 
+    @Override public void hidingAllow(String player, boolean allowed) { HidingAllowed.send(p(player), allowed); }
+
     @Override public boolean gamerule(String rule, String value) { return runCommand("gamerule " + rule + " " + value); }
 
     @Override public void commandsChanged() { ServerCommands.publish(server); }

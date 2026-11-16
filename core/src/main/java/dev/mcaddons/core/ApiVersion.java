@@ -8,7 +8,7 @@ package dev.mcaddons.core;
  */
 public final class ApiVersion {
     public static final int MAJOR = 1;
-    public static final int MINOR = 1;
+    public static final int MINOR = 2;
     public static final String STRING = MAJOR + "." + MINOR;
 
     private ApiVersion() {}

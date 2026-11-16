@@ -24,7 +24,7 @@ public final class Keys {
     static void register() {
         KeyMapping.Category cat = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("mcaddons", "main"));
         browser = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.browser", InputConstants.Type.KEYBOARD, InputConstants.KEY_K, cat));
-        hiding = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.hiding", InputConstants.Type.KEYBOARD, InputConstants.KEY_X, cat));
+        hiding = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.hiding", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), cat));
         for (int i = 1; i <= dev.mcaddons.core.PluginManager.KEY_SLOTS; i++)
             SLOTS.add(KeyMappingHelper.registerKeyMapping(new KeyMapping("key.mcaddons.slot." + i, InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), cat)));
     }
