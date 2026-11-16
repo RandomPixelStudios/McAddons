@@ -12,11 +12,13 @@ jobs:
       - run: ./scripts/server-smoke-test.sh
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-vulkan-drivers
       - name: Client game test
-        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :fabric-26.3:runClientGameTest
-        continue-on-error: true
+        run: |
+          mkdir -p fabric-26.3/build/run/clientGameTest/mcaddons/plugins
+          cp -r registry/plugins/* fabric-26.3/build/run/clientGameTest/mcaddons/plugins/
+          xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew :fabric-26.3:runClientGameTest
       - uses: actions/upload-artifact@v4
         with:
           name: mcaddons
           path: |
             fabric-26.3/build/libs/*.jar
-            run/screenshots/**
+            fabric-26.3/build/run/clientGameTest/screenshots/**
