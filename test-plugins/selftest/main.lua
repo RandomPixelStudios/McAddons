@@ -1,0 +1,25 @@
+local results, ok = {}, true
+local function check(name, cond) results[#results+1] = (cond and "PASS " or "FAIL ") .. name; ok = ok and cond end
+mc.after(60, function()
+  local d = "minecraft:overworld"
+  check("set_block", mc.world.set_block(d, 5, 100, 5, "minecraft:diamond_block"))
+  check("get_block", mc.world.get_block(d, 5, 100, 5) == "minecraft:diamond_block")
+  check("content registered", mc.world.set_block(d, 6, 100, 5, "ruby:ruby_block") and mc.world.get_block(d, 6, 100, 5) == "ruby:ruby_block")
+  check("time", type(mc.world.time(d)) == "number")
+  check("run command", mc.run("hello"))
+  check("players", #mc.players() == 0)
+  check("sandbox", io == nil and os.execute == nil and load == nil)
+  mc.storage.set("last", os.time())
+  check("storage", mc.storage.get("last") ~= nil)
+  check("bad perms rejected", not pcall(mc.hud.text, 1, 1, "x"))
+  check("unknown block errors", not pcall(mc.world.set_block, d, 0, 100, 0, "minecraft:not_a_block"))
+  for _, r in ipairs(results) do mc.log(r) end
+  mc.log(ok and "SELFTEST RESULT: ALL PASSED" or "SELFTEST RESULT: FAILURES")
+  -- end-to-end: remove a plugin, reinstall it from the GitHub registry (SHA-256 verified)
+  mc.run("mca remove welcome")
+  mc.run("mca install welcome")
+  mc.after(200, function()
+    mc.run("hello")
+    mc.after(20, function() mc.run("stop") end)
+  end)
+end)

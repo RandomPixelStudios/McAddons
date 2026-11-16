@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "mcaddons-gametest",
+  "version": "1.0.0",
+  "name": "MC Addons client game test",
+  "environment": "client",
+  "entrypoints": { "fabric-client-gametest": ["dev.mcaddons.fabric.test.ClientTest"] },
+  "depends": { "mcaddons": "*" }
+}

@@ -1,0 +1,2 @@
+{ "id": "selftest", "name": "Self Test", "version": "1.0.0", "description": "in-game API test", "api": "1.0", "side": "server",
+  "permissions": ["chat","players","world.read","world.write","effects","commands","commands.run","storage"] }

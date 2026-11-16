@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "mcaddons",
+  "version": "${version}",
+  "name": "MC Addons",
+  "description": "Write Minecraft mods as safe, hot-reloadable Lua plugins. Browse and install community plugins from GitHub in-game.",
+  "authors": ["RandomPixelStudios"],
+  "contact": {
+    "homepage": "https://github.com/RandomPixelStudios/McAddons",
+    "sources": "https://github.com/RandomPixelStudios/McAddons"
+  },
+  "license": "MIT",
+  "icon": "assets/mcaddons/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.mcaddons.fabric.McAddons"],
+    "client": ["dev.mcaddons.fabric.client.McAddonsClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

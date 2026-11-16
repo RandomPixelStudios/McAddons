@@ -1,0 +1,54 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base { archivesName = 'mcaddons-fabric-26.3' }
+
+loom {
+    splitEnvironmentSourceSets()
+    mods {
+        "mcaddons" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+    runs {
+        configureEach { runDir = '../run' }
+        server { programArgs '--nogui' }
+    }
+}
+
+repositories {
+    maven { name = 'SquidDev'; url = 'https://maven.squiddev.cc/' }
+    mavenCentral()
+}
+
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'mcaddons-gametest'
+        enableGameTests = false
+        enableClientGameTests = true
+        eula = true
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation project(':core')
+    // jar-in-jar: the mod jar contains core + Cobalt, nothing else to install
+    include(project(':core'))
+    include "cc.tweaked:cobalt:${project.cobalt_version}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand 'version': project.version }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}

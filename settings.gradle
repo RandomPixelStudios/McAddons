@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { name = 'SquidDev'; url = 'https://maven.squiddev.cc/' }
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+    }
+}
+rootProject.name = 'mcaddons'
+include 'core'          // version-independent: Lua sandbox, plugin manager, registry
+include 'fabric-26.3'   // adapter for Minecraft 26.3 (add fabric-<version> modules for other MC versions)
